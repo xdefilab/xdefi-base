@@ -1,0 +1,32 @@
+{
+    "private": true,
+    "name": "xdefi-base",
+    "version": "0.0.1",
+    "description": "XDefi Base Contracts and ABI",
+    "scripts": {
+        "compile": "truffle compile",
+        "testrpc": "ganache-cli --deterministic --gasLimit 10000000",
+        "test": "truffle test",
+        "test:verbose": "VERBOSE=true truffle test",
+        "coverage": "yarn solidity-coverage",
+        "deploy:kovan": "truffle migrate --reset --network kovan"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/xdefilab/xdefi-base.git"
+    },
+    "bugs": {
+        "url": "https://github.com/xdefilab/xdefi-base/issues"
+    },
+    "homepage": "https://github.com/xdefilab/xdefi-base#readme",
+    "dependencies": {
+        "decimal.js": "10.2.0",
+        "solidity-coverage": "^0.6.7",
+        "truffle": "^5.0.41",
+        "truffle-assertions": "^0.9.1",
+        "truffle-flattener": "1.4.2",
+        "web3": "^1.2.1",
+        "dotenv": "^8.2.0",
+        "@truffle/hdwallet-provider": "^1.0.41"
+    }
+}
