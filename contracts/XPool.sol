@@ -34,7 +34,7 @@ contract XPool is XApollo, XPToken, XMath {
     event LOG_CALL(bytes4 indexed sig, address indexed caller, bytes data);
 
     modifier _logs_() {
-        //emit LOG_CALL(msg.sig, msg.sender, msg.data);
+        emit LOG_CALL(msg.sig, msg.sender, msg.data);
         _;
     }
 

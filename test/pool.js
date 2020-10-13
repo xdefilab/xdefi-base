@@ -377,7 +377,7 @@ contract('XPool', async (accounts) => {
                 { from: user2 },
             );
             const log = txr.logs[0];
-            //assert.equal(log.event, 'LOG_SWAP');
+            assert.equal(log.event, 'LOG_SWAP');
             // 475.905805337091423
 
             const actual = fromWei(log.args[4]);
@@ -416,7 +416,7 @@ contract('XPool', async (accounts) => {
                 { from: user2 },
             );
             const log = txr.logs[0];
-            //assert.equal(log.event, 'LOG_SWAP');
+            assert.equal(log.event, 'LOG_SWAP');
             // 2.758274824473420261
 
             const actual = fromWei(log.args[3]);
