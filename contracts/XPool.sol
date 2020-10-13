@@ -54,12 +54,14 @@ contract XPool is XApollo, XPToken, XMath {
 
     address private _factory; // XFactory address to push token exitFee to
     address private _controller; // has CONTROL role
+    address private _safu; // SAFU address
     bool private _publicSwap; // true if PUBLIC can call SWAP functions
 
     // `setSwapFee` and `finalize` require CONTROL
     // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
     uint256 private _swapFee;
     bool private _finalized;
+    uint256 private _exitFee;
 
     address[] private _tokens;
     mapping(address => Record) private _records;
@@ -68,9 +70,10 @@ contract XPool is XApollo, XPToken, XMath {
     constructor() public {
         _controller = msg.sender;
         _factory = msg.sender;
-        _swapFee = MIN_FEE;
+        _swapFee = SWAP_FEES[1];
         _publicSwap = false;
         _finalized = false;
+        _exitFee = EXIT_ZERO_FEE;
     }
 
     function isPublicSwap() external view returns (bool) {
@@ -152,6 +155,10 @@ contract XPool is XApollo, XPToken, XMath {
         return _swapFee;
     }
 
+    function getExitFee() external view _viewlock_ returns (uint256) {
+        return _exitFee;
+    }
+
     function getController() external view _viewlock_ returns (address) {
         return _controller;
     }
@@ -161,7 +168,27 @@ contract XPool is XApollo, XPToken, XMath {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         require(swapFee >= MIN_FEE, "ERR_MIN_FEE");
         require(swapFee <= MAX_FEE, "ERR_MAX_FEE");
+        bool found = false;
+        for (uint256 i = 0; i < SWAP_FEES.length; i++) {
+            if (swapFee == SWAP_FEES[i]) {
+                found = true;
+                break;
+            }
+        }
+        require(found, "ERR_INVALID_SWAP_FEE");
+
         _swapFee = swapFee;
+    }
+
+    function setExitFee(uint256 exitFee) external _logs_ _lock_ {
+        require(!_finalized, "ERR_IS_FINALIZED");
+        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+        bool found = false;
+        if (exitFee == EXIT_ZERO_FEE || exitFee == EXIT_VOTING_POOL_FEE) {
+            found = true;
+        }
+        require(found, "ERR_INVALID_EXIT_FEE");
+        _exitFee = exitFee;
     }
 
     function setController(address manager) external _logs_ _lock_ {
@@ -179,6 +206,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         require(!_finalized, "ERR_IS_FINALIZED");
         require(_tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(_tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
         _finalized = true;
         _publicSwap = true;
@@ -241,9 +269,9 @@ contract XPool is XApollo, XPToken, XMath {
         if (balance > oldBalance) {
             _pullUnderlying(token, msg.sender, bsub(balance, oldBalance));
         } else if (balance < oldBalance) {
-            // In this case liquidity is being withdrawn, so charge EXIT_ZERO_FEE
+            // In this case liquidity is being withdrawn, so charge EXIT_FEE
             uint256 tokenBalanceWithdrawn = bsub(oldBalance, balance);
-            uint256 tokenExitFee = bmul(tokenBalanceWithdrawn, EXIT_ZERO_FEE);
+            uint256 tokenExitFee = bmul(tokenBalanceWithdrawn, _exitFee);
             _pushUnderlying(
                 token,
                 msg.sender,
@@ -259,7 +287,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(!_finalized, "ERR_IS_FINALIZED");
 
         uint256 tokenBalance = _records[token].balance;
-        uint256 tokenExitFee = bmul(tokenBalance, EXIT_ZERO_FEE);
+        uint256 tokenExitFee = bmul(tokenBalance, _exitFee);
 
         _totalWeight = bsub(_totalWeight, _records[token].denorm);
 
@@ -360,7 +388,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(_finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 exitFee = bmul(poolAmountIn, EXIT_ZERO_FEE);
+        uint256 exitFee = bmul(poolAmountIn, _exitFee);
         uint256 pAiAfterExitFee = bsub(poolAmountIn, exitFee);
         uint256 ratio = bdiv(pAiAfterExitFee, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
@@ -631,7 +659,7 @@ contract XPool is XApollo, XPToken, XMath {
 
         outRecord.balance = bsub(outRecord.balance, tokenAmountOut);
 
-        uint256 exitFee = bmul(poolAmountIn, EXIT_ZERO_FEE);
+        uint256 exitFee = bmul(poolAmountIn, _exitFee);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
@@ -671,7 +699,7 @@ contract XPool is XApollo, XPToken, XMath {
 
         outRecord.balance = bsub(outRecord.balance, tokenAmountOut);
 
-        uint256 exitFee = bmul(poolAmountIn, EXIT_ZERO_FEE);
+        uint256 exitFee = bmul(poolAmountIn, _exitFee);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 

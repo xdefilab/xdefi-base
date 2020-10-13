@@ -10,7 +10,7 @@ contract XFactory is XApollo {
     mapping(address => bool) private _isPool;
 
     event LOG_NEW_POOL(address indexed caller, address indexed pool);
-    event CoreTransferred(address indexed _core, address indexed _coreNew);
+    event CoreTransferred(address indexed core, address indexed coreNew);
 
     modifier onlyCore() {
         require(msg.sender == core, "Not Authorized");
