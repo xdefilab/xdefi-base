@@ -4,6 +4,17 @@ import "./XPToken.sol";
 import "./XMath.sol";
 
 contract XPool is XApollo, XPToken, XMath {
+    uint256 public constant BONE = 10**18;
+
+    //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
+    uint256[5] public SWAP_FEES = [
+        BONE / 1000,
+        (3 * BONE) / 1000,
+        BONE / 100,
+        (3 * BONE) / 100,
+        BONE / 10
+    ];
+
     struct Record {
         bool bound; // is token bound to pool
         uint256 index; // private
@@ -68,7 +79,7 @@ contract XPool is XApollo, XPToken, XMath {
     constructor() public {
         _controller = msg.sender;
         _factory = msg.sender;
-        _swapFee = MIN_FEE;
+        _swapFee = SWAP_FEES[1];
         _publicSwap = false;
         _finalized = false;
     }
@@ -161,6 +172,15 @@ contract XPool is XApollo, XPToken, XMath {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         require(swapFee >= MIN_FEE, "ERR_MIN_FEE");
         require(swapFee <= MAX_FEE, "ERR_MAX_FEE");
+        bool found = false;
+        for (uint256 i = 0; i < SWAP_FEES.length; i++) {
+            if (swapFee == SWAP_FEES[i]) {
+                found = true;
+                break;
+            }
+        }
+        require(found, "ERR_INVALID_SWAP_FEE");
+
         _swapFee = swapFee;
     }
 
