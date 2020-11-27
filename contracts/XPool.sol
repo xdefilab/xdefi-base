@@ -4,6 +4,17 @@ import "./XPToken.sol";
 import "./XMath.sol";
 
 contract XPool is XApollo, XPToken, XMath {
+    uint256 public constant BONE = 10**18;
+
+    //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
+    uint256[5] public SWAP_FEES = [
+        BONE / 1000,
+        (3 * BONE) / 1000,
+        BONE / 100,
+        (3 * BONE) / 100,
+        BONE / 10
+    ];
+
     struct Record {
         bool bound; // is token bound to pool
         uint256 index; // private
