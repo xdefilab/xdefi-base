@@ -15,10 +15,11 @@ module.exports = {
         kovan: {
             provider: kovanProvider,
             network_id: 42,       // Ropsten's id
-            gas: 5500000,
+            gas: 9500000,
             gasPrice: '10000000000',
             timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
-            skipDryRun: true
+            skipDryRun: true,
+            websockets: true
         },
     },
     // Configure your compilers

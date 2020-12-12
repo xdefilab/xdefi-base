@@ -1,10 +1,13 @@
 pragma solidity 0.5.17;
 
+import "./XVersion.sol";
+import "./XConst.sol";
 import "./XPToken.sol";
 import "./XMath.sol";
+import "./lib/XNum.sol";
 
-contract XPool is XApollo, XPToken, XMath {
-    uint256 public constant BONE = 10**18;
+contract XPool is XApollo, XPToken, XMath, XConst {
+    using XNum for uint256;
 
     //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
     uint256[5] public SWAP_FEES = [
@@ -149,7 +152,7 @@ contract XPool is XApollo, XPToken, XMath {
     {
         require(_records[token].bound, "ERR_NOT_BOUND");
         uint256 denorm = _records[token].denorm;
-        return bdiv(denorm, _totalWeight);
+        return denorm.bdiv(_totalWeight);
     }
 
     function getBalance(address token)
@@ -267,10 +270,10 @@ contract XPool is XApollo, XPToken, XMath {
         // Adjust the denorm and totalWeight
         uint256 oldWeight = _records[token].denorm;
         if (denorm > oldWeight) {
-            _totalWeight = badd(_totalWeight, bsub(denorm, oldWeight));
+            _totalWeight = _totalWeight.badd(denorm.bsub(oldWeight));
             require(_totalWeight <= MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
         } else if (denorm < oldWeight) {
-            _totalWeight = bsub(_totalWeight, bsub(oldWeight, denorm));
+            _totalWeight = _totalWeight.bsub(oldWeight.bsub(denorm));
         }
         _records[token].denorm = denorm;
 
@@ -278,15 +281,15 @@ contract XPool is XApollo, XPToken, XMath {
         uint256 oldBalance = _records[token].balance;
         _records[token].balance = balance;
         if (balance > oldBalance) {
-            _pullUnderlying(token, msg.sender, bsub(balance, oldBalance));
+            _pullUnderlying(token, msg.sender, balance.bsub(oldBalance));
         } else if (balance < oldBalance) {
             // In this case liquidity is being withdrawn, so charge EXIT_FEE
-            uint256 tokenBalanceWithdrawn = bsub(oldBalance, balance);
-            uint256 tokenExitFee = bmul(tokenBalanceWithdrawn, _exitFee);
+            uint256 tokenBalanceWithdrawn = oldBalance.bsub(balance);
+            uint256 tokenExitFee = tokenBalanceWithdrawn.bmul(_exitFee);
             _pushUnderlying(
                 token,
                 msg.sender,
-                bsub(tokenBalanceWithdrawn, tokenExitFee)
+                tokenBalanceWithdrawn.bsub(tokenExitFee)
             );
             _pushUnderlying(token, _factory, tokenExitFee);
         }
@@ -298,9 +301,9 @@ contract XPool is XApollo, XPToken, XMath {
         require(!_finalized, "ERR_IS_FINALIZED");
 
         uint256 tokenBalance = _records[token].balance;
-        uint256 tokenExitFee = bmul(tokenBalance, _exitFee);
+        uint256 tokenExitFee = tokenBalance.bmul(_exitFee);
 
-        _totalWeight = bsub(_totalWeight, _records[token].denorm);
+        _totalWeight = _totalWeight.bsub(_records[token].denorm);
 
         // Swap the token-to-unbind with the last token,
         // then delete the last token
@@ -316,7 +319,7 @@ contract XPool is XApollo, XPToken, XMath {
             balance: 0
         });
 
-        _pushUnderlying(token, msg.sender, bsub(tokenBalance, tokenExitFee));
+        _pushUnderlying(token, msg.sender, tokenBalance.bsub(tokenExitFee));
         _pushUnderlying(token, _factory, tokenExitFee);
     }
 
@@ -374,16 +377,16 @@ contract XPool is XApollo, XPToken, XMath {
         require(_finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 ratio = bdiv(poolAmountOut, poolTotal);
+        uint256 ratio = poolAmountOut.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
-            uint256 tokenAmountIn = bmul(ratio, bal);
+            uint256 tokenAmountIn = ratio.bmul(bal);
             require(tokenAmountIn != 0, "ERR_MATH_APPROX");
             require(tokenAmountIn <= maxAmountsIn[i], "ERR_LIMIT_IN");
-            _records[t].balance = badd(_records[t].balance, tokenAmountIn);
+            _records[t].balance = (_records[t].balance).badd(tokenAmountIn);
             emit LOG_JOIN(msg.sender, t, tokenAmountIn);
             _pullUnderlying(t, msg.sender, tokenAmountIn);
         }
@@ -399,9 +402,9 @@ contract XPool is XApollo, XPToken, XMath {
         require(_finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 exitFee = bmul(poolAmountIn, _exitFee);
-        uint256 pAiAfterExitFee = bsub(poolAmountIn, exitFee);
-        uint256 ratio = bdiv(pAiAfterExitFee, poolTotal);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee);
+        uint256 pAiAfterExitFee = poolAmountIn.bsub(exitFee);
+        uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         _pullPoolShare(msg.sender, poolAmountIn);
@@ -411,10 +414,10 @@ contract XPool is XApollo, XPToken, XMath {
         for (uint256 i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
             uint256 bal = _records[t].balance;
-            uint256 tokenAmountOut = bmul(ratio, bal);
+            uint256 tokenAmountOut = ratio.bmul(bal);
             require(tokenAmountOut != 0, "ERR_MATH_APPROX");
             require(tokenAmountOut >= minAmountsOut[i], "ERR_LIMIT_OUT");
-            _records[t].balance = bsub(_records[t].balance, tokenAmountOut);
+            _records[t].balance = (_records[t].balance).bsub(tokenAmountOut);
             emit LOG_EXIT(msg.sender, t, tokenAmountOut);
             _pushUnderlying(t, msg.sender, tokenAmountOut);
         }
@@ -440,7 +443,7 @@ contract XPool is XApollo, XPToken, XMath {
         Record storage outRecord = _records[address(tokenOut)];
 
         require(
-            tokenAmountIn <= bmul(inRecord.balance, MAX_IN_RATIO),
+            tokenAmountIn <= (inRecord.balance).bmul(MAX_IN_RATIO),
             "ERR_MAX_IN_RATIO"
         );
 
@@ -463,8 +466,8 @@ contract XPool is XApollo, XPToken, XMath {
         );
         require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
 
-        inRecord.balance = badd(inRecord.balance, tokenAmountIn);
-        outRecord.balance = bsub(outRecord.balance, tokenAmountOut);
+        inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
+        outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
         spotPriceAfter = calcSpotPrice(
             inRecord.balance,
@@ -476,7 +479,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
         require(
-            spotPriceBefore <= bdiv(tokenAmountIn, tokenAmountOut),
+            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
             "ERR_MATH_APPROX"
         );
 
@@ -514,7 +517,7 @@ contract XPool is XApollo, XPToken, XMath {
         Record storage outRecord = _records[address(tokenOut)];
 
         require(
-            tokenAmountOut <= bmul(outRecord.balance, MAX_OUT_RATIO),
+            tokenAmountOut <= (outRecord.balance).bmul(MAX_OUT_RATIO),
             "ERR_MAX_OUT_RATIO"
         );
 
@@ -537,8 +540,8 @@ contract XPool is XApollo, XPToken, XMath {
         );
         require(tokenAmountIn <= maxAmountIn, "ERR_LIMIT_IN");
 
-        inRecord.balance = badd(inRecord.balance, tokenAmountIn);
-        outRecord.balance = bsub(outRecord.balance, tokenAmountOut);
+        inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
+        outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
         spotPriceAfter = calcSpotPrice(
             inRecord.balance,
@@ -550,7 +553,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
         require(
-            spotPriceBefore <= bdiv(tokenAmountIn, tokenAmountOut),
+            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
             "ERR_MATH_APPROX"
         );
 
@@ -576,7 +579,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(_finalized, "ERR_NOT_FINALIZED");
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(
-            tokenAmountIn <= bmul(_records[tokenIn].balance, MAX_IN_RATIO),
+            tokenAmountIn <= (_records[tokenIn].balance).bmul(MAX_IN_RATIO),
             "ERR_MAX_IN_RATIO"
         );
 
@@ -593,7 +596,7 @@ contract XPool is XApollo, XPToken, XMath {
 
         require(poolAmountOut >= minPoolAmountOut, "ERR_LIMIT_OUT");
 
-        inRecord.balance = badd(inRecord.balance, tokenAmountIn);
+        inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
@@ -627,11 +630,11 @@ contract XPool is XApollo, XPToken, XMath {
         require(tokenAmountIn <= maxAmountIn, "ERR_LIMIT_IN");
 
         require(
-            tokenAmountIn <= bmul(_records[tokenIn].balance, MAX_IN_RATIO),
+            tokenAmountIn <= (_records[tokenIn].balance).bmul(MAX_IN_RATIO),
             "ERR_MAX_IN_RATIO"
         );
 
-        inRecord.balance = badd(inRecord.balance, tokenAmountIn);
+        inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
@@ -664,18 +667,18 @@ contract XPool is XApollo, XPToken, XMath {
         require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
 
         require(
-            tokenAmountOut <= bmul(_records[tokenOut].balance, MAX_OUT_RATIO),
+            tokenAmountOut <= (_records[tokenOut].balance).bmul(MAX_OUT_RATIO),
             "ERR_MAX_OUT_RATIO"
         );
 
-        outRecord.balance = bsub(outRecord.balance, tokenAmountOut);
+        outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = bmul(poolAmountIn, _exitFee);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(bsub(poolAmountIn, exitFee));
+        _burnPoolShare(poolAmountIn.bsub(exitFee));
         _pushPoolShare(_factory, exitFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
@@ -690,7 +693,7 @@ contract XPool is XApollo, XPToken, XMath {
         require(_finalized, "ERR_NOT_FINALIZED");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
         require(
-            tokenAmountOut <= bmul(_records[tokenOut].balance, MAX_OUT_RATIO),
+            tokenAmountOut <= (_records[tokenOut].balance).bmul(MAX_OUT_RATIO),
             "ERR_MAX_OUT_RATIO"
         );
 
@@ -708,14 +711,14 @@ contract XPool is XApollo, XPToken, XMath {
         require(poolAmountIn != 0, "ERR_MATH_APPROX");
         require(poolAmountIn <= maxPoolAmountIn, "ERR_LIMIT_IN");
 
-        outRecord.balance = bsub(outRecord.balance, tokenAmountOut);
+        outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = bmul(poolAmountIn, _exitFee);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(bsub(poolAmountIn, exitFee));
+        _burnPoolShare(poolAmountIn.bsub(exitFee));
         _pushPoolShare(_factory, exitFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 

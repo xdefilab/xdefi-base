@@ -1,8 +1,11 @@
 pragma solidity 0.5.17;
 
-import "./XConst.sol";
+library XNum {
+    uint256 public constant BONE = 10**18;
+    uint256 public constant MIN_BPOW_BASE = 1 wei;
+    uint256 public constant MAX_BPOW_BASE = (2 * BONE) - 1 wei;
+    uint256 public constant BPOW_PRECISION = BONE / 10**10;
 
-contract XNum is XConst {
     function btoi(uint256 a) internal pure returns (uint256) {
         return a / BONE;
     }

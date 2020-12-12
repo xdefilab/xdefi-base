@@ -2,14 +2,14 @@
     "private": true,
     "name": "xdefi-base",
     "version": "0.0.1",
-    "description": "XDefi Base Contracts and ABI",
+    "description": "XDefi Base Contracts",
     "scripts": {
         "compile": "truffle compile",
         "testrpc": "ganache-cli --deterministic --gasLimit 10000000",
         "test": "truffle test",
         "test:verbose": "VERBOSE=true truffle test",
         "coverage": "yarn solidity-coverage",
-        "deploy:kovan": "truffle migrate --reset --network kovan"
+        "deploy:kovan": "truffle migrate --compile-all --reset --network kovan"
     },
     "repository": {
         "type": "git",

@@ -1,6 +1,6 @@
 pragma solidity 0.5.17;
 
-import "./XNum.sol";
+import "./lib/XNum.sol";
 
 // Highly opinionated token implementation
 
@@ -28,7 +28,9 @@ interface IERC20 {
     ) external returns (bool);
 }
 
-contract XTokenBase is XNum {
+contract XTokenBase {
+    using XNum for uint256;
+
     mapping(address => uint256) internal _balance;
     mapping(address => mapping(address => uint256)) internal _allowance;
     uint256 internal _totalSupply;
@@ -37,15 +39,15 @@ contract XTokenBase is XNum {
     event Transfer(address indexed src, address indexed dst, uint256 amt);
 
     function _mint(uint256 amt) internal {
-        _balance[address(this)] = badd(_balance[address(this)], amt);
-        _totalSupply = badd(_totalSupply, amt);
+        _balance[address(this)] = (_balance[address(this)]).badd(amt);
+        _totalSupply = _totalSupply.badd(amt);
         emit Transfer(address(0), address(this), amt);
     }
 
     function _burn(uint256 amt) internal {
         require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_BAL");
-        _balance[address(this)] = bsub(_balance[address(this)], amt);
-        _totalSupply = bsub(_totalSupply, amt);
+        _balance[address(this)] = (_balance[address(this)]).bsub(amt);
+        _totalSupply = _totalSupply.bsub(amt);
         emit Transfer(address(this), address(0), amt);
     }
 
@@ -55,8 +57,8 @@ contract XTokenBase is XNum {
         uint256 amt
     ) internal {
         require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
-        _balance[src] = bsub(_balance[src], amt);
-        _balance[dst] = badd(_balance[dst], amt);
+        _balance[src] = (_balance[src]).bsub(amt);
+        _balance[dst] = (_balance[dst]).badd(amt);
         emit Transfer(src, dst, amt);
     }
 
@@ -70,6 +72,8 @@ contract XTokenBase is XNum {
 }
 
 contract XPToken is XTokenBase, IERC20 {
+    using XNum for uint256;
+
     string private _name = "xDefi Pool Token";
     string private _symbol = "XPT";
     uint8 private _decimals = 18;
@@ -112,7 +116,7 @@ contract XPToken is XTokenBase, IERC20 {
         external
         returns (bool)
     {
-        _allowance[msg.sender][dst] = badd(_allowance[msg.sender][dst], amt);
+        _allowance[msg.sender][dst] = (_allowance[msg.sender][dst]).badd(amt);
         emit Approval(msg.sender, dst, _allowance[msg.sender][dst]);
         return true;
     }
@@ -125,7 +129,7 @@ contract XPToken is XTokenBase, IERC20 {
         if (amt > oldValue) {
             _allowance[msg.sender][dst] = 0;
         } else {
-            _allowance[msg.sender][dst] = bsub(oldValue, amt);
+            _allowance[msg.sender][dst] = oldValue.bsub(amt);
         }
         emit Approval(msg.sender, dst, _allowance[msg.sender][dst]);
         return true;
@@ -147,8 +151,7 @@ contract XPToken is XTokenBase, IERC20 {
         );
         _move(src, dst, amt);
         if (msg.sender != src && _allowance[src][msg.sender] != uint256(-1)) {
-            _allowance[src][msg.sender] = bsub(
-                _allowance[src][msg.sender],
+            _allowance[src][msg.sender] = (_allowance[src][msg.sender]).bsub(
                 amt
             );
             emit Approval(msg.sender, dst, _allowance[src][msg.sender]);
