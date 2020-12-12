@@ -61,20 +61,12 @@ contract XTokenBase {
         _balance[dst] = (_balance[dst]).badd(amt);
         emit Transfer(src, dst, amt);
     }
-
-    function _push(address to, uint256 amt) internal {
-        _move(address(this), to, amt);
-    }
-
-    function _pull(address from, uint256 amt) internal {
-        _move(from, address(this), amt);
-    }
 }
 
 contract XPToken is XTokenBase, IERC20 {
     using XNum for uint256;
 
-    string private _name = "xDefi Pool Token";
+    string private _name = "XDeFi Pool Token";
     string private _symbol = "XPT";
     uint8 private _decimals = 18;
 

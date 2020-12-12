@@ -3,10 +3,10 @@ pragma solidity 0.5.17;
 import "./XVersion.sol";
 import "./XConst.sol";
 import "./XPToken.sol";
-import "./XMath.sol";
+import "./lib/XMath.sol";
 import "./lib/XNum.sol";
 
-contract XPool is XApollo, XPToken, XMath, XConst {
+contract XPool is XApollo, XPToken, XConst {
     using XNum for uint256;
 
     //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
@@ -340,7 +340,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
         Record storage inRecord = _records[tokenIn];
         Record storage outRecord = _records[tokenOut];
         return
-            calcSpotPrice(
+            XMath.calcSpotPrice(
                 inRecord.balance,
                 inRecord.denorm,
                 outRecord.balance,
@@ -360,7 +360,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
         Record storage inRecord = _records[tokenIn];
         Record storage outRecord = _records[tokenOut];
         return
-            calcSpotPrice(
+            XMath.calcSpotPrice(
                 inRecord.balance,
                 inRecord.denorm,
                 outRecord.balance,
@@ -447,7 +447,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
             "ERR_MAX_IN_RATIO"
         );
 
-        uint256 spotPriceBefore = calcSpotPrice(
+        uint256 spotPriceBefore = XMath.calcSpotPrice(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -456,7 +456,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
         );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
 
-        tokenAmountOut = calcOutGivenIn(
+        tokenAmountOut = XMath.calcOutGivenIn(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -469,7 +469,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
         inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        spotPriceAfter = calcSpotPrice(
+        spotPriceAfter = XMath.calcSpotPrice(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -521,7 +521,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
             "ERR_MAX_OUT_RATIO"
         );
 
-        uint256 spotPriceBefore = calcSpotPrice(
+        uint256 spotPriceBefore = XMath.calcSpotPrice(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -530,7 +530,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
         );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
 
-        tokenAmountIn = calcInGivenOut(
+        tokenAmountIn = XMath.calcInGivenOut(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -543,7 +543,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
         inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        spotPriceAfter = calcSpotPrice(
+        spotPriceAfter = XMath.calcSpotPrice(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -585,7 +585,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
 
         Record storage inRecord = _records[tokenIn];
 
-        poolAmountOut = calcPoolOutGivenSingleIn(
+        poolAmountOut = XMath.calcPoolOutGivenSingleIn(
             inRecord.balance,
             inRecord.denorm,
             _totalSupply,
@@ -617,7 +617,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
 
         Record storage inRecord = _records[tokenIn];
 
-        tokenAmountIn = calcSingleInGivenPoolOut(
+        tokenAmountIn = XMath.calcSingleInGivenPoolOut(
             inRecord.balance,
             inRecord.denorm,
             _totalSupply,
@@ -655,7 +655,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
 
         Record storage outRecord = _records[tokenOut];
 
-        tokenAmountOut = calcSingleOutGivenPoolIn(
+        tokenAmountOut = XMath.calcSingleOutGivenPoolIn(
             outRecord.balance,
             outRecord.denorm,
             _totalSupply,
@@ -699,7 +699,7 @@ contract XPool is XApollo, XPToken, XMath, XConst {
 
         Record storage outRecord = _records[tokenOut];
 
-        poolAmountIn = calcPoolInGivenSingleOut(
+        poolAmountIn = XMath.calcPoolInGivenSingleOut(
             outRecord.balance,
             outRecord.denorm,
             _totalSupply,
@@ -748,11 +748,11 @@ contract XPool is XApollo, XPToken, XMath, XConst {
     }
 
     function _pullPoolShare(address from, uint256 amount) internal {
-        _pull(from, amount);
+        _move(from, address(this), amount);
     }
 
     function _pushPoolShare(address to, uint256 amount) internal {
-        _push(to, amount);
+        _move(address(this), to, amount);
     }
 
     function _mintPoolShare(uint256 amount) internal {

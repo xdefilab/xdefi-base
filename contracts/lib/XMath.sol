@@ -1,8 +1,8 @@
 pragma solidity 0.5.17;
 
-import "./lib/XNum.sol";
+import "./XNum.sol";
 
-contract XMath {
+library XMath {
     using XNum for uint256;
 
     uint256 public constant BONE = 10**18;
