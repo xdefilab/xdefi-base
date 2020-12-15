@@ -81,6 +81,9 @@ contract XPool is XApollo, XPToken, XConst {
     mapping(address => Record) private _records;
     uint256 private _totalWeight;
 
+    mapping(address => bool) private _reference;
+    address private _farmController = address(0x0000000000000000000000000000000000000000);
+
     constructor() public {
         _controller = msg.sender;
         _factory = msg.sender;
@@ -209,6 +212,11 @@ contract XPool is XApollo, XPToken, XConst {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         _controller = manager;
     }
+
+    // function setFarmController(address farmController) external _logs_ _lock_ {
+    //     require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+    //     _farmController = farmController;
+    // }
 
     function setPublicSwap(bool public_) external _logs_ _lock_ {
         require(!_finalized, "ERR_IS_FINALIZED");
@@ -428,7 +436,8 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountIn,
         address tokenOut,
         uint256 minAmountOut,
-        uint256 maxPrice
+        uint256 maxPrice,
+        address referCode
     )
         external
         _logs_
@@ -494,6 +503,24 @@ contract XPool is XApollo, XPToken, XConst {
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
+        uint swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+
+        uint referFee;
+        if (referCode != msg.sender && _reference[referCode]) {
+            referFee = swapFee.bdiv(5);
+            _pullUnderlying(tokenIn, referCode, referFee);
+        }
+        
+        uint safuFee;
+        if (_farmController == _controller) {
+            safuFee = swapFee.bsub(referFee);
+        } else {
+            safuFee = swapFee.bdiv(2000);
+        }
+        _pullUnderlying(tokenIn, _safu, safuFee);
+
+        _reference[tx.origin] = true;
+
         return (tokenAmountOut, spotPriceAfter);
     }
 
@@ -502,7 +529,8 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 maxAmountIn,
         address tokenOut,
         uint256 tokenAmountOut,
-        uint256 maxPrice
+        uint256 maxPrice,
+        address referCode
     )
         external
         _logs_
@@ -567,6 +595,24 @@ contract XPool is XApollo, XPToken, XConst {
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
+
+        uint swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+
+        uint referFee;
+        if (referCode != msg.sender && _reference[referCode]) {
+            referFee = swapFee.bdiv(5);
+            _pullUnderlying(tokenIn, referCode, referFee);
+        }
+        
+        uint safuFee;
+        if (_farmController == _controller) {
+            safuFee = swapFee.bsub(referFee);
+        } else {
+            safuFee = swapFee.bdiv(2000);
+        }
+        _pullUnderlying(tokenIn, _safu, safuFee);
+
+        _reference[tx.origin] = true;
 
         return (tokenAmountIn, spotPriceAfter);
     }
