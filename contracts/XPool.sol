@@ -81,8 +81,11 @@ contract XPool is XApollo, XPToken, XConst {
     mapping(address => Record) private _records;
     uint256 private _totalWeight;
 
+    // key: referrer address
     mapping(address => bool) private _reference;
-    address private _farmController = address(0x0000000000000000000000000000000000000000);
+    address private _farmController = address(
+        0x0000000000000000000000000000000000000000
+    );
 
     constructor() public {
         _controller = msg.sender;
@@ -437,7 +440,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenOut,
         uint256 minAmountOut,
         uint256 maxPrice,
-        address referCode
+        address referrer
     )
         external
         _logs_
@@ -503,15 +506,15 @@ contract XPool is XApollo, XPToken, XConst {
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
-        uint swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
 
-        uint referFee;
-        if (referCode != msg.sender && _reference[referCode]) {
+        uint256 referFee;
+        if (referrer != msg.sender && _reference[referrer]) {
             referFee = swapFee.bdiv(5);
-            _pullUnderlying(tokenIn, referCode, referFee);
+            _pullUnderlying(tokenIn, referrer, referFee);
         }
-        
-        uint safuFee;
+
+        uint256 safuFee;
         if (_farmController == _controller) {
             safuFee = swapFee.bsub(referFee);
         } else {
@@ -530,7 +533,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenOut,
         uint256 tokenAmountOut,
         uint256 maxPrice,
-        address referCode
+        address referrer
     )
         external
         _logs_
@@ -596,15 +599,15 @@ contract XPool is XApollo, XPToken, XConst {
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
-        uint swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
 
-        uint referFee;
-        if (referCode != msg.sender && _reference[referCode]) {
+        uint256 referFee;
+        if (referrer != msg.sender && _reference[referrer]) {
             referFee = swapFee.bdiv(5);
-            _pullUnderlying(tokenIn, referCode, referFee);
+            _pullUnderlying(tokenIn, referrer, referFee);
         }
-        
-        uint safuFee;
+
+        uint256 safuFee;
         if (_farmController == _controller) {
             safuFee = swapFee.bsub(referFee);
         } else {

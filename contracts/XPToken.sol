@@ -104,29 +104,6 @@ contract XPToken is XTokenBase, IERC20 {
         return true;
     }
 
-    // function increaseApproval(address dst, uint256 amt)
-    //     external
-    //     returns (bool)
-    // {
-    //     _allowance[msg.sender][dst] = (_allowance[msg.sender][dst]).badd(amt);
-    //     emit Approval(msg.sender, dst, _allowance[msg.sender][dst]);
-    //     return true;
-    // }
-
-    // function decreaseApproval(address dst, uint256 amt)
-    //     external
-    //     returns (bool)
-    // {
-    //     uint256 oldValue = _allowance[msg.sender][dst];
-    //     if (amt > oldValue) {
-    //         _allowance[msg.sender][dst] = 0;
-    //     } else {
-    //         _allowance[msg.sender][dst] = oldValue.bsub(amt);
-    //     }
-    //     emit Approval(msg.sender, dst, _allowance[msg.sender][dst]);
-    //     return true;
-    // }
-
     function transfer(address dst, uint256 amt) external returns (bool) {
         _move(msg.sender, dst, amt);
         return true;
