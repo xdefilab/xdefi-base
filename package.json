@@ -9,6 +9,7 @@
         "test": "truffle test",
         "test:verbose": "VERBOSE=true truffle test",
         "coverage": "yarn solidity-coverage",
+        "deploy:development": "truffle migrate --compile-all --reset --network development",
         "deploy:kovan": "truffle migrate --compile-all --reset --network kovan"
     },
     "repository": {

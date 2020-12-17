@@ -1,7 +1,7 @@
 const Decimal = require('decimal.js');
 const truffleAssert = require('truffle-assertions');
 const { calcRelativeDiff } = require('../lib/calc_comparisons');
-
+const { address } = require('./utils/Ethereum');
 const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
@@ -120,7 +120,7 @@ contract('XPool', async (accounts) => {
             const maxPrice = MAX;
 
             const output = await pool.swapExactAmountIn.call(
-                tokenIn, tokenInAmount, tokenOut, minAmountOut, maxPrice,
+                tokenIn, tokenInAmount, tokenOut, minAmountOut, maxPrice, address(0)
             );
 
             // Checking outputs
@@ -160,7 +160,7 @@ contract('XPool', async (accounts) => {
             const maxPrice = MAX;
 
             const output = await pool.swapExactAmountOut.call(
-                tokenIn, maxAmountIn, tokenOut, tokenAmountOut, maxPrice,
+                tokenIn, maxAmountIn, tokenOut, tokenAmountOut, maxPrice, address(0)
             );
 
             // Checking outputs

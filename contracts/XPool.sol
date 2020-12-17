@@ -33,6 +33,13 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
+    event LOG_REFER(
+        address indexed caller,
+        address indexed referrer,
+        address indexed tokenIn,
+        uint256 fee
+    );
+
     event LOG_JOIN(
         address indexed caller,
         address indexed tokenIn,
@@ -508,10 +515,15 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
 
-        uint256 referFee;
-        if (referrer != msg.sender && _reference[referrer]) {
+        uint256 referFee = 0;
+        if (
+            referrer != address(0) &&
+            referrer != msg.sender &&
+            _reference[referrer]
+        ) {
             referFee = swapFee.bdiv(5);
             _pullUnderlying(tokenIn, referrer, referFee);
+            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
         uint256 safuFee;
@@ -520,7 +532,9 @@ contract XPool is XApollo, XPToken, XConst {
         } else {
             safuFee = swapFee.bdiv(2000);
         }
-        _pullUnderlying(tokenIn, _safu, safuFee);
+        if (_safu != address(0)) {
+            _pullUnderlying(tokenIn, _safu, safuFee);
+        }
 
         _reference[tx.origin] = true;
 
@@ -601,10 +615,15 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
 
-        uint256 referFee;
-        if (referrer != msg.sender && _reference[referrer]) {
+        uint256 referFee = 0;
+        if (
+            referrer != address(0) &&
+            referrer != msg.sender &&
+            _reference[referrer]
+        ) {
             referFee = swapFee.bdiv(5);
             _pullUnderlying(tokenIn, referrer, referFee);
+            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
         uint256 safuFee;
@@ -613,7 +632,10 @@ contract XPool is XApollo, XPToken, XConst {
         } else {
             safuFee = swapFee.bdiv(2000);
         }
-        _pullUnderlying(tokenIn, _safu, safuFee);
+
+        if (_safu != address(0)) {
+            _pullUnderlying(tokenIn, _safu, safuFee);
+        }
 
         _reference[tx.origin] = true;
 

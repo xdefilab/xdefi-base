@@ -1,4 +1,5 @@
 const Decimal = require('decimal.js');
+const { address } = require('./utils/Ethereum');
 const {
     calcSpotPrice,
     calcOutGivenIn,
@@ -127,6 +128,7 @@ contract('XPool', async (accounts) => {
                 tokenOut,
                 toWei(minAmountOut),
                 maxPrice,
+                address(0)
             );
 
             // Checking outputs
@@ -187,6 +189,7 @@ contract('XPool', async (accounts) => {
                 tokenOut,
                 toWei(tokenAmountOut),
                 maxPrice,
+                address(0)
             );
 
             // Checking outputs

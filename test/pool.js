@@ -1,6 +1,6 @@
 const truffleAssert = require('truffle-assertions');
 const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
-
+const { address } = require('./utils/Ethereum');
 const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
@@ -202,16 +202,16 @@ contract('XPool', async (accounts) => {
 
         it('Fails calling any swap before finalizing', async () => {
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountIn(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountIn(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountOut(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountOut(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
             );
         });
 
@@ -356,16 +356,16 @@ contract('XPool', async (accounts) => {
 
         it('Fail swapExactAmountIn unbound or over min max ratios', async () => {
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(WETH, toWei('2.5'), XXX, toWei('100'), toWei('200'), { from: user2 }),
+                pool.swapExactAmountIn(WETH, toWei('2.5'), XXX, toWei('100'), toWei('200'), address(0), { from: user2 }),
                 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), { from: user2 }),
+                pool.swapExactAmountIn(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), address(0), { from: user2 }),
                 'ERR_MAX_IN_RATIO',
             );
         });
 
-        it('swapExactAmountIn', async () => {
+        it('swapExactAmountIn without referrer', async () => {
             // 2.5 WETH -> DAI
             const expected = calcOutGivenIn(52.5, 5, 10500, 5, 2.5, 0.003);
             const txr = await pool.swapExactAmountIn(
@@ -374,6 +374,7 @@ contract('XPool', async (accounts) => {
                 DAI,
                 toWei('475'),
                 toWei('200'),
+                address(0),
                 { from: user2 },
             );
             const log = txr.logs[0];
@@ -403,7 +404,9 @@ contract('XPool', async (accounts) => {
             assert.equal(0.333333333333333333, fromWei(daiNormWeight));
         });
 
-        it('swapExactAmountOut', async () => {
+        //TODO: 'swapExactAmountIn with referrer'
+
+        it('swapExactAmountOut without referrer', async () => {
             // ETH -> 1 MKR
             // const amountIn = (55 * (((21 / (21 - 1)) ** (5 / 5)) - 1)) / (1 - 0.003);
             const expected = calcInGivenOut(55, 5, 21, 5, 1, 0.003);
@@ -413,6 +416,7 @@ contract('XPool', async (accounts) => {
                 MKR,
                 toWei('1.0'),
                 toWei('500'),
+                address(0),
                 { from: user2 },
             );
             const log = txr.logs[0];
@@ -459,16 +463,16 @@ contract('XPool', async (accounts) => {
 
         it('Fails calling any swap on unbound token', async () => {
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
+                pool.swapExactAmountIn(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
+                pool.swapExactAmountIn(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
+                pool.swapExactAmountOut(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
+                pool.swapExactAmountOut(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
                 pool.joinswapExternAmountIn(XXX, toWei('2.5'), toWei('0')), 'ERR_NOT_BOUND',
@@ -512,7 +516,7 @@ contract('XPool', async (accounts) => {
     describe('XPToken interactions', () => {
         it('Token descriptors', async () => {
             const name = await pool.name();
-            assert.equal(name, 'xDefi Pool Token');
+            assert.equal(name, 'XDeFi Pool Token');
 
             const symbol = await pool.symbol();
             assert.equal(symbol, 'XPT');
@@ -525,18 +529,6 @@ contract('XPool', async (accounts) => {
             await pool.approve(user1, toWei('50'));
             let allowance = await pool.allowance(admin, user1);
             assert.equal(fromWei(allowance), 50);
-
-            await pool.increaseApproval(user1, toWei('50'));
-            allowance = await pool.allowance(admin, user1);
-            assert.equal(fromWei(allowance), 100);
-
-            await pool.decreaseApproval(user1, toWei('50'));
-            allowance = await pool.allowance(admin, user1);
-            assert.equal(fromWei(allowance), 50);
-
-            await pool.decreaseApproval(user1, toWei('100'));
-            allowance = await pool.allowance(admin, user1);
-            assert.equal(fromWei(allowance), 0);
         });
 
         it('Token transfers', async () => {
