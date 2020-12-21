@@ -1,9 +1,11 @@
-import "../../XNum.sol";
+import "../../lib/XNum.sol";
 
 pragma solidity 0.5.17;
 
 //  This test is similar to TBPoolJoin but with an exit fee
-contract TBPoolJoinExit is XNum {
+contract TBPoolJoinExit {
+    uint256 public constant EXIT_ZERO_FEE = 0;
+    
     bool public echidna_no_bug_found = true;
 
     // joinPool models the BPool.joinPool behavior for one token
@@ -12,11 +14,11 @@ contract TBPoolJoinExit is XNum {
         uint256 poolTotal,
         uint256 _records_t_balance
     ) internal pure returns (uint256) {
-        uint256 ratio = bdiv(poolAmountOut, poolTotal);
+        uint256 ratio = XNum.bdiv(poolAmountOut, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         uint256 bal = _records_t_balance;
-        uint256 tokenAmountIn = bmul(ratio, bal);
+        uint256 tokenAmountIn = XNum.bmul(ratio, bal);
 
         return tokenAmountIn;
     }
@@ -27,13 +29,13 @@ contract TBPoolJoinExit is XNum {
         uint256 poolTotal,
         uint256 _records_t_balance
     ) internal pure returns (uint256) {
-        uint256 exitFee = bmul(poolAmountIn, EXIT_ZERO_FEE);
-        uint256 pAiAfterExitFee = bsub(poolAmountIn, exitFee);
-        uint256 ratio = bdiv(pAiAfterExitFee, poolTotal);
+        uint256 exitFee = XNum.bmul(poolAmountIn, EXIT_ZERO_FEE);
+        uint256 pAiAfterExitFee = XNum.bsub(poolAmountIn, exitFee);
+        uint256 ratio = XNum.bdiv(pAiAfterExitFee, poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         uint256 bal = _records_t_balance;
-        uint256 tokenAmountOut = bmul(ratio, bal);
+        uint256 tokenAmountOut = XNum.bmul(ratio, bal);
 
         return tokenAmountOut;
     }
@@ -59,8 +61,8 @@ contract TBPoolJoinExit is XNum {
         require(_records_t_balance <= 10 ether);
         require(_records_t_balance >= 10**6);
 
-        poolTotal = badd(poolTotal, poolAmountOut);
-        _records_t_balance = badd(_records_t_balance, tokenAmountIn);
+        poolTotal = XNum.badd(poolTotal, poolAmountOut);
+        _records_t_balance = XNum.badd(_records_t_balance, tokenAmountIn);
 
         require(tokenAmountIn > 0); // prevent triggering the free token generation from joinPool
 

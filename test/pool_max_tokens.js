@@ -1,5 +1,5 @@
 const truffleAssert = require('truffle-assertions');
-
+const { address } = require('./utils/Ethereum');
 const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
@@ -126,6 +126,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('0'),
                     toWei('0.9'),
+                    address(0)
                 ),
                 'ERR_BAD_LIMIT_PRICE',
             );
@@ -136,6 +137,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('2'),
                     toWei('3.5'),
+                    address(0)
                 ),
                 'ERR_LIMIT_OUT',
             );
@@ -146,6 +148,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('0'),
                     toWei('3.00001'),
+                    address(0)
                 ),
                 'ERR_LIMIT_PRICE',
             );
@@ -159,6 +162,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('40'),
                     toWei('5'),
+                    address(0)
                 ),
                 'ERR_MAX_OUT_RATIO',
             );
@@ -169,6 +173,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('1'),
                     toWei('1'),
+                    address(0)
                 ),
                 'ERR_BAD_LIMIT_PRICE',
             );
@@ -179,6 +184,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('1'),
                     toWei('5'),
+                    address(0)
                 ),
                 'ERR_LIMIT_IN',
             );
@@ -189,6 +195,7 @@ contract('XPool', async (accounts) => {
                     BBB,
                     toWei('1'),
                     toWei('3.00001'),
+                    address(0)
                 ),
                 'ERR_LIMIT_PRICE',
             );

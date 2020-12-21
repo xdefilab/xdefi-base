@@ -2,7 +2,12 @@ pragma solidity 0.5.17;
 
 import "./XNum.sol";
 
-contract XMath is XApollo, XConst, XNum {
+library XMath {
+    using XNum for uint256;
+
+    uint256 public constant BONE = 10**18;
+    uint256 public constant EXIT_ZERO_FEE = 0;
+
     /**********************************************************************************************
     // calcSpotPrice                                                                             //
     // sP = spotPrice                                                                            //
@@ -19,11 +24,11 @@ contract XMath is XApollo, XConst, XNum {
         uint256 tokenWeightOut,
         uint256 swapFee
     ) public pure returns (uint256 spotPrice) {
-        uint256 numer = bdiv(tokenBalanceIn, tokenWeightIn);
-        uint256 denom = bdiv(tokenBalanceOut, tokenWeightOut);
-        uint256 ratio = bdiv(numer, denom);
-        uint256 scale = bdiv(BONE, bsub(BONE, swapFee));
-        return (spotPrice = bmul(ratio, scale));
+        uint256 numer = tokenBalanceIn.bdiv(tokenWeightIn);
+        uint256 denom = tokenBalanceOut.bdiv(tokenWeightOut);
+        uint256 ratio = numer.bdiv(denom);
+        uint256 scale = BONE.bdiv(BONE.bsub(swapFee));
+        return (spotPrice = ratio.bmul(scale));
     }
 
     /**********************************************************************************************
@@ -44,13 +49,13 @@ contract XMath is XApollo, XConst, XNum {
         uint256 tokenAmountIn,
         uint256 swapFee
     ) public pure returns (uint256 tokenAmountOut) {
-        uint256 weightRatio = bdiv(tokenWeightIn, tokenWeightOut);
-        uint256 adjustedIn = bsub(BONE, swapFee);
-        adjustedIn = bmul(tokenAmountIn, adjustedIn);
-        uint256 y = bdiv(tokenBalanceIn, badd(tokenBalanceIn, adjustedIn));
-        uint256 foo = bpow(y, weightRatio);
-        uint256 bar = bsub(BONE, foo);
-        tokenAmountOut = bmul(tokenBalanceOut, bar);
+        uint256 weightRatio = tokenWeightIn.bdiv(tokenWeightOut);
+        uint256 adjustedIn = BONE.bsub(swapFee);
+        adjustedIn = tokenAmountIn.bmul(adjustedIn);
+        uint256 y = tokenBalanceIn.bdiv(tokenBalanceIn.badd(adjustedIn));
+        uint256 foo = y.bpow(weightRatio);
+        uint256 bar = BONE.bsub(foo);
+        tokenAmountOut = tokenBalanceOut.bmul(bar);
         return tokenAmountOut;
     }
 
@@ -72,13 +77,13 @@ contract XMath is XApollo, XConst, XNum {
         uint256 tokenAmountOut,
         uint256 swapFee
     ) public pure returns (uint256 tokenAmountIn) {
-        uint256 weightRatio = bdiv(tokenWeightOut, tokenWeightIn);
-        uint256 diff = bsub(tokenBalanceOut, tokenAmountOut);
-        uint256 y = bdiv(tokenBalanceOut, diff);
-        uint256 foo = bpow(y, weightRatio);
-        foo = bsub(foo, BONE);
-        tokenAmountIn = bsub(BONE, swapFee);
-        tokenAmountIn = bdiv(bmul(tokenBalanceIn, foo), tokenAmountIn);
+        uint256 weightRatio = tokenWeightOut.bdiv(tokenWeightIn);
+        uint256 diff = tokenBalanceOut.bsub(tokenAmountOut);
+        uint256 y = tokenBalanceOut.bdiv(diff);
+        uint256 foo = y.bpow(weightRatio);
+        foo = foo.bsub(BONE);
+        tokenAmountIn = BONE.bsub(swapFee);
+        tokenAmountIn = tokenBalanceIn.bmul(foo).bdiv(tokenAmountIn);
         return tokenAmountIn;
     }
 
@@ -104,17 +109,17 @@ contract XMath is XApollo, XConst, XNum {
         ///  which is implicitly traded to the other pool tokens.
         // That proportion is (1- weightTokenIn)
         // tokenAiAfterFee = tAi * (1 - (1-weightTi) * poolFee);
-        uint256 normalizedWeight = bdiv(tokenWeightIn, totalWeight);
-        uint256 zaz = bmul(bsub(BONE, normalizedWeight), swapFee);
-        uint256 tokenAmountInAfterFee = bmul(tokenAmountIn, bsub(BONE, zaz));
+        uint256 normalizedWeight = tokenWeightIn.bdiv(totalWeight);
+        uint256 zaz = BONE.bsub(normalizedWeight).bmul(swapFee);
+        uint256 tokenAmountInAfterFee = tokenAmountIn.bmul(BONE.bsub(zaz));
 
-        uint256 newTokenBalanceIn = badd(tokenBalanceIn, tokenAmountInAfterFee);
-        uint256 tokenInRatio = bdiv(newTokenBalanceIn, tokenBalanceIn);
+        uint256 newTokenBalanceIn = tokenBalanceIn.badd(tokenAmountInAfterFee);
+        uint256 tokenInRatio = newTokenBalanceIn.bdiv(tokenBalanceIn);
 
         // uint newPoolSupply = (ratioTi ^ weightTi) * poolSupply;
-        uint256 poolRatio = bpow(tokenInRatio, normalizedWeight);
-        uint256 newPoolSupply = bmul(poolRatio, poolSupply);
-        poolAmountOut = bsub(newPoolSupply, poolSupply);
+        uint256 poolRatio = tokenInRatio.bpow(normalizedWeight);
+        uint256 newPoolSupply = poolRatio.bmul(poolSupply);
+        poolAmountOut = newPoolSupply.bsub(poolSupply);
         return poolAmountOut;
     }
 
@@ -136,20 +141,20 @@ contract XMath is XApollo, XConst, XNum {
         uint256 poolAmountOut,
         uint256 swapFee
     ) public pure returns (uint256 tokenAmountIn) {
-        uint256 normalizedWeight = bdiv(tokenWeightIn, totalWeight);
-        uint256 newPoolSupply = badd(poolSupply, poolAmountOut);
-        uint256 poolRatio = bdiv(newPoolSupply, poolSupply);
+        uint256 normalizedWeight = tokenWeightIn.bdiv(totalWeight);
+        uint256 newPoolSupply = poolSupply.badd(poolAmountOut);
+        uint256 poolRatio = newPoolSupply.bdiv(poolSupply);
 
         //uint newBalTi = poolRatio^(1/weightTi) * balTi;
-        uint256 boo = bdiv(BONE, normalizedWeight);
-        uint256 tokenInRatio = bpow(poolRatio, boo);
-        uint256 newTokenBalanceIn = bmul(tokenInRatio, tokenBalanceIn);
-        uint256 tokenAmountInAfterFee = bsub(newTokenBalanceIn, tokenBalanceIn);
+        uint256 boo = BONE.bdiv(normalizedWeight);
+        uint256 tokenInRatio = poolRatio.bpow(boo);
+        uint256 newTokenBalanceIn = tokenInRatio.bmul(tokenBalanceIn);
+        uint256 tokenAmountInAfterFee = newTokenBalanceIn.bsub(tokenBalanceIn);
         // Do reverse order of fees charged in joinswap_ExternAmountIn, this way
         //     ``` pAo == joinswap_ExternAmountIn(Ti, joinswap_PoolAmountOut(pAo, Ti)) ```
         //uint tAi = tAiAfterFee / (1 - (1-weightTi) * swapFee) ;
-        uint256 zar = bmul(bsub(BONE, normalizedWeight), swapFee);
-        tokenAmountIn = bdiv(tokenAmountInAfterFee, bsub(BONE, zar));
+        uint256 zar = (BONE.bsub(normalizedWeight)).bmul(swapFee);
+        tokenAmountIn = tokenAmountInAfterFee.bdiv(BONE.bsub(zar));
         return tokenAmountIn;
     }
 
@@ -172,29 +177,27 @@ contract XMath is XApollo, XConst, XNum {
         uint256 poolAmountIn,
         uint256 swapFee
     ) public pure returns (uint256 tokenAmountOut) {
-        uint256 normalizedWeight = bdiv(tokenWeightOut, totalWeight);
+        uint256 normalizedWeight = tokenWeightOut.bdiv(totalWeight);
         // charge exit fee on the pool token side
         // pAiAfterExitFee = pAi*(1-exitFee)
-        uint256 poolAmountInAfterExitFee = bmul(
-            poolAmountIn,
-            bsub(BONE, EXIT_ZERO_FEE)
+        uint256 poolAmountInAfterExitFee = poolAmountIn.bmul(
+            BONE.bsub(EXIT_ZERO_FEE)
         );
-        uint256 newPoolSupply = bsub(poolSupply, poolAmountInAfterExitFee);
-        uint256 poolRatio = bdiv(newPoolSupply, poolSupply);
+        uint256 newPoolSupply = poolSupply.bsub(poolAmountInAfterExitFee);
+        uint256 poolRatio = newPoolSupply.bdiv(poolSupply);
 
         // newBalTo = poolRatio^(1/weightTo) * balTo;
-        uint256 tokenOutRatio = bpow(poolRatio, bdiv(BONE, normalizedWeight));
-        uint256 newTokenBalanceOut = bmul(tokenOutRatio, tokenBalanceOut);
+        uint256 tokenOutRatio = poolRatio.bpow(BONE.bdiv(normalizedWeight));
+        uint256 newTokenBalanceOut = tokenOutRatio.bmul(tokenBalanceOut);
 
-        uint256 tokenAmountOutBeforeSwapFee = bsub(
-            tokenBalanceOut,
+        uint256 tokenAmountOutBeforeSwapFee = tokenBalanceOut.bsub(
             newTokenBalanceOut
         );
 
         // charge swap fee on the output token side
         //uint tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)
-        uint256 zaz = bmul(bsub(BONE, normalizedWeight), swapFee);
-        tokenAmountOut = bmul(tokenAmountOutBeforeSwapFee, bsub(BONE, zaz));
+        uint256 zaz = BONE.bsub(normalizedWeight).bmul(swapFee);
+        tokenAmountOut = tokenAmountOutBeforeSwapFee.bmul(BONE.bsub(zaz));
         return tokenAmountOut;
     }
 
@@ -218,32 +221,27 @@ contract XMath is XApollo, XConst, XNum {
         uint256 swapFee
     ) public pure returns (uint256 poolAmountIn) {
         // charge swap fee on the output token side
-        uint256 normalizedWeight = bdiv(tokenWeightOut, totalWeight);
+        uint256 normalizedWeight = tokenWeightOut.bdiv(totalWeight);
         //uint tAoBeforeSwapFee = tAo / (1 - (1-weightTo) * swapFee) ;
-        uint256 zoo = bsub(BONE, normalizedWeight);
-        uint256 zar = bmul(zoo, swapFee);
-        uint256 tokenAmountOutBeforeSwapFee = bdiv(
-            tokenAmountOut,
-            bsub(BONE, zar)
+        uint256 zoo = BONE.bsub(normalizedWeight);
+        uint256 zar = zoo.bmul(swapFee);
+        uint256 tokenAmountOutBeforeSwapFee = tokenAmountOut.bdiv(
+            BONE.bsub(zar)
         );
 
-        uint256 newTokenBalanceOut = bsub(
-            tokenBalanceOut,
+        uint256 newTokenBalanceOut = tokenBalanceOut.bsub(
             tokenAmountOutBeforeSwapFee
         );
-        uint256 tokenOutRatio = bdiv(newTokenBalanceOut, tokenBalanceOut);
+        uint256 tokenOutRatio = newTokenBalanceOut.bdiv(tokenBalanceOut);
 
         //uint newPoolSupply = (ratioTo ^ weightTo) * poolSupply;
-        uint256 poolRatio = bpow(tokenOutRatio, normalizedWeight);
-        uint256 newPoolSupply = bmul(poolRatio, poolSupply);
-        uint256 poolAmountInAfterExitFee = bsub(poolSupply, newPoolSupply);
+        uint256 poolRatio = tokenOutRatio.bpow(normalizedWeight);
+        uint256 newPoolSupply = poolRatio.bmul(poolSupply);
+        uint256 poolAmountInAfterExitFee = poolSupply.bsub(newPoolSupply);
 
         // charge exit fee on the pool token side
         // pAi = pAiAfterExitFee/(1-exitFee)
-        poolAmountIn = bdiv(
-            poolAmountInAfterExitFee,
-            bsub(BONE, EXIT_ZERO_FEE)
-        );
+        poolAmountIn = poolAmountInAfterExitFee.bdiv(BONE.bsub(EXIT_ZERO_FEE));
         return poolAmountIn;
     }
 }

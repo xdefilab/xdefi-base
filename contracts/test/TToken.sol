@@ -1,58 +1,46 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 pragma solidity 0.5.17;
 
 // Test Token
 
 contract TToken {
-
     string private _name;
     string private _symbol;
-    uint8   private _decimals;
+    uint8 private _decimals;
 
     address private _owner;
 
-    uint internal _totalSupply;
+    uint256 internal _totalSupply;
 
-    mapping(address => uint)                   private _balance;
-    mapping(address => mapping(address=>uint)) private _allowance;
+    mapping(address => uint256) private _balance;
+    mapping(address => mapping(address => uint256)) private _allowance;
 
     modifier _onlyOwner_() {
         require(msg.sender == _owner, "ERR_NOT_OWNER");
         _;
     }
 
-    event Approval(address indexed src, address indexed dst, uint amt);
-    event Transfer(address indexed src, address indexed dst, uint amt);
+    event Approval(address indexed src, address indexed dst, uint256 amt);
+    event Transfer(address indexed src, address indexed dst, uint256 amt);
 
     // Math
-    function add(uint a, uint b) internal pure returns (uint c) {
+    function add(uint256 a, uint256 b) internal pure returns (uint256 c) {
         require((c = a + b) >= a);
     }
-    function sub(uint a, uint b) internal pure returns (uint c) {
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256 c) {
         require((c = a - b) <= a);
     }
 
     constructor(
         string memory name,
         string memory symbol,
-        uint8 decimals
+        uint8 decimals,
+        address owner
     ) public {
         _name = name;
         _symbol = symbol;
         _decimals = decimals;
-        _owner = msg.sender;
+        _owner = owner;
     }
 
     function name() public view returns (string memory) {
@@ -63,44 +51,52 @@ contract TToken {
         return _symbol;
     }
 
-    function decimals() public view returns(uint8) {
+    function decimals() public view returns (uint8) {
         return _decimals;
     }
 
-    function _move(address src, address dst, uint amt) internal {
+    function _move(
+        address src,
+        address dst,
+        uint256 amt
+    ) internal {
         require(_balance[src] >= amt, "ERR_INSUFFICIENT_BAL");
         _balance[src] = sub(_balance[src], amt);
         _balance[dst] = add(_balance[dst], amt);
         emit Transfer(src, dst, amt);
     }
 
-    function _push(address to, uint amt) internal {
+    function _push(address to, uint256 amt) internal {
         _move(address(this), to, amt);
     }
 
-    function _pull(address from, uint amt) internal {
+    function _pull(address from, uint256 amt) internal {
         _move(from, address(this), amt);
     }
 
-    function _mint(address dst, uint amt) internal {
+    function _mint(address dst, uint256 amt) internal {
         _balance[dst] = add(_balance[dst], amt);
         _totalSupply = add(_totalSupply, amt);
         emit Transfer(address(0), dst, amt);
     }
 
-    function allowance(address src, address dst) external view returns (uint) {
+    function allowance(address src, address dst)
+        external
+        view
+        returns (uint256)
+    {
         return _allowance[src][dst];
     }
 
-    function balanceOf(address whom) external view returns (uint) {
+    function balanceOf(address whom) external view returns (uint256) {
         return _balance[whom];
     }
 
-    function totalSupply() public view returns (uint) {
+    function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
-    function approve(address dst, uint amt) external returns (bool) {
+    function approve(address dst, uint256 amt) external returns (bool) {
         _allowance[msg.sender][dst] = amt;
         emit Approval(msg.sender, dst, amt);
         return true;
@@ -111,7 +107,7 @@ contract TToken {
         return true;
     }
 
-    function burn(uint amt) public returns (bool) {
+    function burn(uint256 amt) public returns (bool) {
         require(_balance[address(this)] >= amt, "ERR_INSUFFICIENT_BAL");
         _balance[address(this)] = sub(_balance[address(this)], amt);
         _totalSupply = sub(_totalSupply, amt);
@@ -119,13 +115,20 @@ contract TToken {
         return true;
     }
 
-    function transfer(address dst, uint amt) external returns (bool) {
+    function transfer(address dst, uint256 amt) external returns (bool) {
         _move(msg.sender, dst, amt);
         return true;
     }
 
-    function transferFrom(address src, address dst, uint amt) external returns (bool) {
-        require(msg.sender == src || amt <= _allowance[src][msg.sender], "ERR_BTOKEN_BAD_CALLER");
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 amt
+    ) external returns (bool) {
+        require(
+            msg.sender == src || amt <= _allowance[src][msg.sender],
+            "ERR_BTOKEN_BAD_CALLER"
+        );
         _move(src, dst, amt);
         if (msg.sender != src && _allowance[src][msg.sender] != uint256(-1)) {
             _allowance[src][msg.sender] = sub(_allowance[src][msg.sender], amt);

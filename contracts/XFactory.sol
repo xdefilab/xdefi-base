@@ -1,7 +1,7 @@
 pragma solidity 0.5.17;
 
 // Builds new XPools, logging their addresses and providing `isXPool(address) -> (bool)`
-
+import "./XVersion.sol";
 import "./XPool.sol";
 
 contract XFactory is XApollo {
