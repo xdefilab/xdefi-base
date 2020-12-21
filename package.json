@@ -2,9 +2,9 @@
     "private": true,
     "name": "xdefi-base",
     "version": "0.0.1",
-    "description": "XDefi Base Contracts",
+    "description": "XDEFI Swap Contracts",
     "scripts": {
-        "compile": "truffle compile",
+        "compile": "truffle compile --all",
         "testrpc": "ganache-cli --deterministic --gasLimit 10000000",
         "test": "truffle test",
         "test:verbose": "VERBOSE=true truffle test",
