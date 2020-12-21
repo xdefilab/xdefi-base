@@ -1,19 +1,20 @@
 const Decimal = require('decimal.js');
 const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
-
-const XSwapProxy = artifacts.require('XSwapProxy');
+const { address } = require('./utils/Ethereum');
+const XSwapProxy = artifacts.require('XSwapProxyV1');
 const TToken = artifacts.require('TToken');
 const TTokenFactory = artifacts.require('TTokenFactory');
 const XFactory = artifacts.require('XFactory');
 const XPool = artifacts.require('XPool');
 const Weth9 = artifacts.require('WETH9');
 const errorDelta = 10 ** -8;
-const verbose = process.env.VERBOSE;
+//const verbose = process.env.VERBOSE;
+const verbose = true;
 
 contract('XSwapProxy', async (accounts) => {
     const admin = accounts[0];
     const nonAdmin = accounts[1];
-    const { toHex } = web3.utils;
+    const minter = accounts[2];
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
 
@@ -37,22 +38,32 @@ contract('XSwapProxy', async (accounts) => {
             tokens = await TTokenFactory.deployed();
             factory = await XFactory.deployed();
 
-            await tokens.build(toHex('DAI'), toHex('DAI'), 18);
-            await tokens.build(toHex('MKR'), toHex('MKR'), 18);
+            await tokens.build('DAI', 'DAI', 18, minter, { from: minter });
+            await tokens.build('MKR', 'MKR', 18, minter, { from: minter });
 
-            DAI = await tokens.get.call(toHex('DAI'));
-            MKR = await tokens.get.call(toHex('MKR'));
+            DAI = await tokens.get.call('DAI');
+            MKR = await tokens.get.call('MKR');
 
             dai = await TToken.at(DAI);
             mkr = await TToken.at(MKR);
 
-            await weth.deposit({ value: toWei('25') });
-            await dai.mint(admin, toWei('10000'));
-            await mkr.mint(admin, toWei('20'));
+            let name = await dai.name();
+            let symbol = await dai.symbol();
+            console.log(`DAI: ${DAI}, name:, ${name}, symbol: ${symbol}`);
+
+            let weth_balance_admin = await weth.balanceOf(admin);
+            let dai_balance_admin = await dai.balanceOf(admin);
+            let weth_balance_nonadmin = await weth.balanceOf(nonAdmin);
+            let dai_balance_nonadmin = await dai.balanceOf(nonAdmin);
+            console.log(`weth_balance_admin: ${weth_balance_admin}, dai_balance_adminL: ${dai_balance_admin},  weth_balance_nonadmin: ${weth_balance_nonadmin}, dai_balance_nonadmin: ${dai_balance_nonadmin}`);
+
+            await weth.deposit({ from: admin, value: toWei('25') });
+            await dai.mint(admin, toWei('10000'), { from: minter });
+            await mkr.mint(admin, toWei('20'), { from: minter });
 
             await weth.deposit({ from: nonAdmin, value: toWei('25') });
-            await dai.mint(nonAdmin, toWei('10000'));
-            await mkr.mint(nonAdmin, toWei('20'));
+            await dai.mint(nonAdmin, toWei('10000'), { from: minter });
+            await mkr.mint(nonAdmin, toWei('20'), { from: minter });
 
             POOL1 = await factory.newXPool.call(); // this works fine in clean room
             await factory.newXPool();
@@ -120,7 +131,7 @@ contract('XSwapProxy', async (accounts) => {
             ];
             const swapFee = fromWei(await pool1.getSwapFee());
             const totalAmountOut = await proxy.batchSwapExactIn.call(
-                swaps, WETH, DAI, toWei('2'), toWei('0'),
+                swaps, WETH, DAI, toWei('2'), toWei('0'), address(0),
                 { from: nonAdmin },
             );
 
@@ -166,7 +177,7 @@ contract('XSwapProxy', async (accounts) => {
 
             const swapFee = fromWei(await pool1.getSwapFee());
             const totalAmountIn = await proxy.batchSwapExactOut.call(
-                swaps, WETH, DAI, toWei('7'),
+                swaps, WETH, DAI, toWei('7'), address(0),
                 { from: nonAdmin },
             );
 
@@ -211,7 +222,7 @@ contract('XSwapProxy', async (accounts) => {
 
             const swapFee = fromWei(await pool1.getSwapFee());
             const totalAmountOut = await proxy.batchEthInSwapExactIn.call(
-                swaps, DAI, toWei('0'),
+                swaps, DAI, toWei('0'), address(0),
                 { from: nonAdmin, value: toWei('2') },
             );
 
@@ -256,7 +267,7 @@ contract('XSwapProxy', async (accounts) => {
 
             const swapFee = fromWei(await pool1.getSwapFee());
             const totalAmountOut = await proxy.batchEthOutSwapExactIn.call(
-                swaps, DAI, toWei('150'), toWei('0.5'),
+                swaps, DAI, toWei('150'), toWei('0.5'), address(0),
                 { from: nonAdmin },
             );
 
@@ -301,7 +312,7 @@ contract('XSwapProxy', async (accounts) => {
 
             const swapFee = fromWei(await pool1.getSwapFee());
             const totalAmountIn = await proxy.batchEthInSwapExactOut.call(
-                swaps, DAI,
+                swaps, DAI, address(0),
                 { from: nonAdmin, value: toWei('7.5') },
             );
 
@@ -346,7 +357,7 @@ contract('XSwapProxy', async (accounts) => {
 
             const swapFee = fromWei(await pool1.getSwapFee());
             const totalAmountIn = await proxy.batchEthOutSwapExactOut.call(
-                swaps, DAI, toWei('750'),
+                swaps, DAI, toWei('750'), address(0),
                 { from: nonAdmin },
             );
 

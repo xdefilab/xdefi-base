@@ -7,7 +7,8 @@ contract PoolInterface {
         uint256,
         address,
         uint256,
-        uint256
+        uint256,
+        address
     ) external returns (uint256, uint256);
 
     function swapExactAmountOut(
@@ -15,10 +16,12 @@ contract PoolInterface {
         uint256,
         address,
         uint256,
-        uint256
+        uint256,
+        address
     ) external returns (uint256, uint256);
 }
 
+// WETH9
 contract TokenInterface {
     function balanceOf(address) public returns (uint256);
 
@@ -79,7 +82,8 @@ contract XSwapProxyV1 {
         address tokenIn,
         address tokenOut,
         uint256 totalAmountIn,
-        uint256 minTotalAmountOut
+        uint256 minTotalAmountOut,
+        address referrer
     ) public _logs_ _lock_ returns (uint256 totalAmountOut) {
         TokenInterface TI = TokenInterface(tokenIn);
         TokenInterface TO = TokenInterface(tokenOut);
@@ -99,7 +103,8 @@ contract XSwapProxyV1 {
                 swap.tokenInParam,
                 tokenOut,
                 swap.tokenOutParam,
-                swap.maxPrice
+                swap.maxPrice,
+                referrer
             );
             totalAmountOut = add(tokenAmountOut, totalAmountOut);
         }
@@ -119,7 +124,8 @@ contract XSwapProxyV1 {
         Swap[] memory swaps,
         address tokenIn,
         address tokenOut,
-        uint256 maxTotalAmountIn
+        uint256 maxTotalAmountIn,
+        address referrer
     ) public _logs_ _lock_ returns (uint256 totalAmountIn) {
         TokenInterface TI = TokenInterface(tokenIn);
         TokenInterface TO = TokenInterface(tokenOut);
@@ -138,7 +144,8 @@ contract XSwapProxyV1 {
                 swap.tokenInParam,
                 tokenOut,
                 swap.tokenOutParam,
-                swap.maxPrice
+                swap.maxPrice,
+                referrer
             );
             totalAmountIn = add(tokenAmountIn, totalAmountIn);
         }
@@ -157,7 +164,8 @@ contract XSwapProxyV1 {
     function batchEthInSwapExactIn(
         Swap[] memory swaps,
         address tokenOut,
-        uint256 minTotalAmountOut
+        uint256 minTotalAmountOut,
+        address referrer
     ) public payable _logs_ _lock_ returns (uint256 totalAmountOut) {
         TokenInterface TO = TokenInterface(tokenOut);
         weth.deposit.value(msg.value)();
@@ -172,7 +180,8 @@ contract XSwapProxyV1 {
                 swap.tokenInParam,
                 tokenOut,
                 swap.tokenOutParam,
-                swap.maxPrice
+                swap.maxPrice,
+                referrer
             );
             totalAmountOut = add(tokenAmountOut, totalAmountOut);
         }
@@ -194,7 +203,8 @@ contract XSwapProxyV1 {
         Swap[] memory swaps,
         address tokenIn,
         uint256 totalAmountIn,
-        uint256 minTotalAmountOut
+        uint256 minTotalAmountOut,
+        address referrer
     ) public _logs_ _lock_ returns (uint256 totalAmountOut) {
         TokenInterface TI = TokenInterface(tokenIn);
         require(
@@ -212,7 +222,8 @@ contract XSwapProxyV1 {
                 swap.tokenInParam,
                 address(weth),
                 swap.tokenOutParam,
-                swap.maxPrice
+                swap.maxPrice,
+                referrer
             );
 
             totalAmountOut = add(tokenAmountOut, totalAmountOut);
@@ -229,13 +240,11 @@ contract XSwapProxyV1 {
         return totalAmountOut;
     }
 
-    function batchEthInSwapExactOut(Swap[] memory swaps, address tokenOut)
-        public
-        payable
-        _logs_
-        _lock_
-        returns (uint256 totalAmountIn)
-    {
+    function batchEthInSwapExactOut(
+        Swap[] memory swaps,
+        address tokenOut,
+        address referrer
+    ) public payable _logs_ _lock_ returns (uint256 totalAmountIn) {
         TokenInterface TO = TokenInterface(tokenOut);
         weth.deposit.value(msg.value)();
         for (uint256 i = 0; i < swaps.length; i++) {
@@ -249,7 +258,8 @@ contract XSwapProxyV1 {
                 swap.tokenInParam,
                 tokenOut,
                 swap.tokenOutParam,
-                swap.maxPrice
+                swap.maxPrice,
+                referrer
             );
 
             totalAmountIn = add(tokenAmountIn, totalAmountIn);
@@ -270,7 +280,8 @@ contract XSwapProxyV1 {
     function batchEthOutSwapExactOut(
         Swap[] memory swaps,
         address tokenIn,
-        uint256 maxTotalAmountIn
+        uint256 maxTotalAmountIn,
+        address referrer
     ) public _logs_ _lock_ returns (uint256 totalAmountIn) {
         TokenInterface TI = TokenInterface(tokenIn);
         require(
@@ -288,7 +299,8 @@ contract XSwapProxyV1 {
                 swap.tokenInParam,
                 address(weth),
                 swap.tokenOutParam,
-                swap.maxPrice
+                swap.maxPrice,
+                referrer
             );
 
             totalAmountIn = add(tokenAmountIn, totalAmountIn);
