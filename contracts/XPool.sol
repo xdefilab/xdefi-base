@@ -75,7 +75,6 @@ contract XPool is XApollo, XPToken, XConst {
 
     address private _factory; // XFactory address to push token exitFee to
     address private _controller; // has CONTROL role
-    address private _safu; // SAFU address
     bool private _publicSwap; // true if PUBLIC can call SWAP functions
 
     // `setSwapFee` and `finalize` require CONTROL
@@ -88,14 +87,16 @@ contract XPool is XApollo, XPToken, XConst {
     mapping(address => Record) private _records;
     uint256 private _totalWeight;
 
-    // key: referrer address
-    mapping(address => bool) private _reference;
+     // SAFU address
+    address private _safu = address(
+        0x0000000000000000000000000000000000000000
+    );
     address private _farmController = address(
         0x0000000000000000000000000000000000000000
     );
 
     constructor() public {
-        _controller = msg.sender;
+        _controller = tx.origin;
         _factory = msg.sender;
         _swapFee = SWAP_FEES[1];
         _publicSwap = false;
@@ -222,11 +223,6 @@ contract XPool is XApollo, XPToken, XConst {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         _controller = manager;
     }
-
-    // function setFarmController(address farmController) external _logs_ _lock_ {
-    //     require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-    //     _farmController = farmController;
-    // }
 
     function setPublicSwap(bool public_) external _logs_ _lock_ {
         require(!_finalized, "ERR_IS_FINALIZED");
@@ -518,8 +514,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
-            referrer != msg.sender &&
-            _reference[referrer]
+            referrer != tx.origin
         ) {
             referFee = swapFee.bdiv(5);
             _pullUnderlying(tokenIn, referrer, referFee);
@@ -535,8 +530,6 @@ contract XPool is XApollo, XPToken, XConst {
         if (_safu != address(0)) {
             _pullUnderlying(tokenIn, _safu, safuFee);
         }
-
-        _reference[tx.origin] = true;
 
         return (tokenAmountOut, spotPriceAfter);
     }
@@ -618,8 +611,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
-            referrer != msg.sender &&
-            _reference[referrer]
+            referrer != tx.origin
         ) {
             referFee = swapFee.bdiv(5);
             _pullUnderlying(tokenIn, referrer, referFee);
@@ -636,8 +628,6 @@ contract XPool is XApollo, XPToken, XConst {
         if (_safu != address(0)) {
             _pullUnderlying(tokenIn, _safu, safuFee);
         }
-
-        _reference[tx.origin] = true;
 
         return (tokenAmountIn, spotPriceAfter);
     }
