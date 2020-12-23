@@ -87,16 +87,14 @@ contract XPool is XApollo, XPToken, XConst {
     mapping(address => Record) private _records;
     uint256 private _totalWeight;
 
-     // SAFU address
-    address private _safu = address(
-        0x0000000000000000000000000000000000000000
-    );
+    // SAFU address
+    address private _safu = address(0x0000000000000000000000000000000000000000);
     address private _farmController = address(
         0x0000000000000000000000000000000000000000
     );
 
     constructor() public {
-        _controller = tx.origin;
+        _controller = msg.sender;
         _factory = msg.sender;
         _swapFee = SWAP_FEES[1];
         _publicSwap = false;
@@ -514,6 +512,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
+            referrer != msg.sender &&
             referrer != tx.origin
         ) {
             referFee = swapFee.bdiv(5);
@@ -611,6 +610,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
+            referrer != msg.sender &&
             referrer != tx.origin
         ) {
             referFee = swapFee.bdiv(5);
