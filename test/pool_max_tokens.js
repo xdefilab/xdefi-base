@@ -6,6 +6,8 @@ const TToken = artifacts.require('TToken');
 
 contract('XPool', async (accounts) => {
     const admin = accounts[0];
+    const minter = accounts[1];
+    const referrer = accounts[2];
 
     const { toWei } = web3.utils;
     const { fromWei } = web3.utils;
@@ -27,15 +29,15 @@ contract('XPool', async (accounts) => {
         await factory.newXPool();
         pool = await XPool.at(POOL);
 
-        aaa = await TToken.new('AAA', 'AAA', 18);
-        bbb = await TToken.new('BBB', 'BBB', 18);
-        ccc = await TToken.new('CCC', 'CCC', 18);
-        ddd = await TToken.new('DDD', 'EEE', 18);
-        eee = await TToken.new('EEE', 'EEE', 18);
-        fff = await TToken.new('FFF', 'FFF', 18);
-        ggg = await TToken.new('GGG', 'GGG', 18);
-        hhh = await TToken.new('HHH', 'HHH', 18);
-        zzz = await TToken.new('ZZZ', 'ZZZ', 18);
+        aaa = await TToken.new('AAA', 'AAA', 18, minter);
+        bbb = await TToken.new('BBB', 'BBB', 18, minter);
+        ccc = await TToken.new('CCC', 'CCC', 18, minter);
+        ddd = await TToken.new('DDD', 'EEE', 18, minter);
+        eee = await TToken.new('EEE', 'EEE', 18, minter);
+        fff = await TToken.new('FFF', 'FFF', 18, minter);
+        ggg = await TToken.new('GGG', 'GGG', 18, minter);
+        hhh = await TToken.new('HHH', 'HHH', 18, minter);
+        zzz = await TToken.new('ZZZ', 'ZZZ', 18, minter);
 
         AAA = aaa.address;
         BBB = bbb.address;
@@ -48,15 +50,15 @@ contract('XPool', async (accounts) => {
         ZZZ = zzz.address;
 
         // Admin balances
-        await aaa.mint(admin, toWei('100'));
-        await bbb.mint(admin, toWei('100'));
-        await ccc.mint(admin, toWei('100'));
-        await ddd.mint(admin, toWei('100'));
-        await eee.mint(admin, toWei('100'));
-        await fff.mint(admin, toWei('100'));
-        await ggg.mint(admin, toWei('100'));
-        await hhh.mint(admin, toWei('100'));
-        await zzz.mint(admin, toWei('100'));
+        await aaa.mint(admin, toWei('100'), { from: minter });
+        await bbb.mint(admin, toWei('100'), { from: minter });
+        await ccc.mint(admin, toWei('100'), { from: minter });
+        await ddd.mint(admin, toWei('100'), { from: minter });
+        await eee.mint(admin, toWei('100'), { from: minter });
+        await fff.mint(admin, toWei('100'), { from: minter });
+        await ggg.mint(admin, toWei('100'), { from: minter });
+        await hhh.mint(admin, toWei('100'), { from: minter });
+        await zzz.mint(admin, toWei('100'), { from: minter });
     });
 
     describe('Binding Tokens', () => {
@@ -150,7 +152,7 @@ contract('XPool', async (accounts) => {
                     toWei('3.00001'),
                     address(0)
                 ),
-                'ERR_LIMIT_PRICE',
+                'ERR_BAD_LIMIT_PRICE',
             );
         });
 
@@ -197,7 +199,7 @@ contract('XPool', async (accounts) => {
                     toWei('3.00001'),
                     address(0)
                 ),
-                'ERR_LIMIT_PRICE',
+                'ERR_BAD_LIMIT_PRICE',
             );
         });
     });

@@ -31,10 +31,10 @@ contract('XPool', async (accounts) => {
         await factory.newXPool();
         pool = await XPool.at(POOL);
 
-        weth = await TToken.new('Wrapped Ether', 'WETH', 18);
-        mkr = await TToken.new('Maker', 'MKR', 18);
-        dai = await TToken.new('Dai Stablecoin', 'DAI', 18);
-        xxx = await TToken.new('XXX', 'XXX', 18);
+        weth = await TToken.new('Wrapped Ether', 'WETH', 18, admin);
+        mkr = await TToken.new('Maker', 'MKR', 18, admin);
+        dai = await TToken.new('Dai Stablecoin', 'DAI', 18, admin);
+        xxx = await TToken.new('XXX', 'XXX', 18, admin);
 
         WETH = weth.address;
         MKR = mkr.address;
@@ -70,7 +70,7 @@ contract('XPool', async (accounts) => {
 
     describe('Binding Tokens', () => {
         it('Controller is msg.sender', async () => {
-            const controller = await pool.getController();
+            const controller = await pool._controller();
             assert.equal(controller, admin);
         });
 
@@ -260,7 +260,7 @@ contract('XPool', async (accounts) => {
 
         it('Admin sets swap fees', async () => {
             await pool.setSwapFee(toWei('0.003'));
-            const swapFee = await pool.getSwapFee();
+            const swapFee = await pool._swapFee();
             assert.equal(0.003, fromWei(swapFee));
         });
 
