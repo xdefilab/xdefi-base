@@ -33,12 +33,8 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
-    event LOG_REFER(
-        address indexed caller,
-        address indexed referrer,
-        address indexed tokenIn,
-        uint256 fee
-    );
+    event LOG_REFER(address indexed ref, address indexed tokenIn, uint256 fee);
+    event LOG_SAFU(address indexed tokenIn, uint256 fee);
 
     event LOG_JOIN(
         address indexed caller,
@@ -73,30 +69,31 @@ contract XPool is XApollo, XPToken, XConst {
 
     bool private _mutex;
 
-    address private _factory; // XFactory address to push token exitFee to
-    address private _controller; // has CONTROL role
+    address public _controller; // has CONTROL role
     bool private _publicSwap; // true if PUBLIC can call SWAP functions
 
     // `setSwapFee` and `finalize` require CONTROL
     // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
-    uint256 private _swapFee;
+    uint256 public _swapFee;
     bool private _finalized;
-    uint256 private _exitFee;
+    uint256 public _exitFee;
 
     address[] private _tokens;
     mapping(address => Record) private _records;
     uint256 private _totalWeight;
 
-    // SAFU address
-    address private _safu = address(0x0000000000000000000000000000000000000000);
-    address private _farmController = address(
-        0x0000000000000000000000000000000000000000
-    );
+    // SAFU address; also push token exitFee to this address
+    address public constant _safu = 0x6db3A50418cE4B09c3133bb4fa57E4BE98E21662;
+
+    // (tx.origin == _farmXDEXCreator) is xdex farm pool
+    address public _origin;
+    address
+        public constant _farmXDEXCreator = 0xa1cfB221AC318F751892345D87b9F4E91227Bc1C;
 
     constructor() public {
         _controller = msg.sender;
-        _factory = msg.sender;
-        _swapFee = SWAP_FEES[1];
+        _origin = tx.origin;
+        _swapFee = MIN_FEE;
         _publicSwap = false;
         _finalized = false;
         _exitFee = EXIT_ZERO_FEE;
@@ -177,18 +174,6 @@ contract XPool is XApollo, XPToken, XConst {
         return _records[token].balance;
     }
 
-    function getSwapFee() external view _viewlock_ returns (uint256) {
-        return _swapFee;
-    }
-
-    function getExitFee() external view _viewlock_ returns (uint256) {
-        return _exitFee;
-    }
-
-    function getController() external view _viewlock_ returns (address) {
-        return _controller;
-    }
-
     function setSwapFee(uint256 swapFee) external _logs_ _lock_ {
         require(!_finalized, "ERR_IS_FINALIZED");
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
@@ -207,8 +192,7 @@ contract XPool is XApollo, XPToken, XConst {
     }
 
     function setExitFee(uint256 exitFee) external _logs_ _lock_ {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+        require(msg.sender == _farmXDEXCreator, "ERR_NOT_CONTROLLER");
         bool found = false;
         if (exitFee == EXIT_ZERO_FEE || exitFee == EXIT_VOTING_POOL_FEE) {
             found = true;
@@ -297,13 +281,15 @@ contract XPool is XApollo, XPToken, XConst {
         } else if (balance < oldBalance) {
             // In this case liquidity is being withdrawn, so charge EXIT_FEE
             uint256 tokenBalanceWithdrawn = oldBalance.bsub(balance);
-            uint256 tokenExitFee = tokenBalanceWithdrawn.bmul(_exitFee);
+            uint256 tokenExitFee = tokenBalanceWithdrawn.bmul(_exitFee).bdiv(
+                BONE
+            );
             _pushUnderlying(
                 token,
                 msg.sender,
                 tokenBalanceWithdrawn.bsub(tokenExitFee)
             );
-            _pushUnderlying(token, _factory, tokenExitFee);
+            _pushUnderlying(token, _safu, tokenExitFee);
         }
     }
 
@@ -313,7 +299,7 @@ contract XPool is XApollo, XPToken, XConst {
         require(!_finalized, "ERR_IS_FINALIZED");
 
         uint256 tokenBalance = _records[token].balance;
-        uint256 tokenExitFee = tokenBalance.bmul(_exitFee);
+        uint256 tokenExitFee = tokenBalance.bmul(_exitFee).bdiv(BONE);
 
         _totalWeight = _totalWeight.bsub(_records[token].denorm);
 
@@ -332,7 +318,7 @@ contract XPool is XApollo, XPToken, XConst {
         });
 
         _pushUnderlying(token, msg.sender, tokenBalance.bsub(tokenExitFee));
-        _pushUnderlying(token, _factory, tokenExitFee);
+        _pushUnderlying(token, _safu, tokenExitFee);
     }
 
     // Absorb any tokens that have been sent to this contract into the pool
@@ -414,13 +400,13 @@ contract XPool is XApollo, XPToken, XConst {
         require(_finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 exitFee = poolAmountIn.bmul(_exitFee);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
         uint256 pAiAfterExitFee = poolAmountIn.bsub(exitFee);
         uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _pushPoolShare(_factory, exitFee);
+        _pushPoolShare(_safu, exitFee);
         _burnPoolShare(pAiAfterExitFee);
 
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -504,10 +490,7 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountOut
         );
 
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee);
 
         uint256 referFee = 0;
         if (
@@ -515,20 +498,26 @@ contract XPool is XApollo, XPToken, XConst {
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = swapFee.bdiv(5);
-            _pullUnderlying(tokenIn, referrer, referFee);
-            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
+            referFee = swapFee / 5;
+            _pushUnderlying(tokenIn, referrer, referFee);
+            emit LOG_REFER(referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee;
-        if (_farmController == _controller) {
+        uint256 safuFee = 0;
+        //is farm pool
+        if (_farmXDEXCreator == _origin) {
             safuFee = swapFee.bsub(referFee);
         } else {
-            safuFee = swapFee.bdiv(2000);
+            safuFee = tokenAmountIn / 2000;
         }
+
         if (_safu != address(0)) {
-            _pullUnderlying(tokenIn, _safu, safuFee);
+            _pushUnderlying(tokenIn, _safu, safuFee);
+            emit LOG_SAFU(tokenIn, safuFee);
         }
+
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return (tokenAmountOut, spotPriceAfter);
     }
@@ -602,10 +591,7 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountOut
         );
 
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee);
 
         uint256 referFee = 0;
         if (
@@ -613,22 +599,26 @@ contract XPool is XApollo, XPToken, XConst {
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = swapFee.bdiv(5);
-            _pullUnderlying(tokenIn, referrer, referFee);
-            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
+            referFee = swapFee / 5;
+            _pushUnderlying(tokenIn, referrer, referFee);
+            emit LOG_REFER(referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee;
-        if (_farmController == _controller) {
+        uint256 safuFee = 0;
+        //is farm pool
+        if (_farmXDEXCreator == _origin) {
             safuFee = swapFee.bsub(referFee);
         } else {
-            safuFee = swapFee.bdiv(2000);
+            safuFee = tokenAmountIn / 2000;
         }
 
         if (_safu != address(0)) {
-            _pullUnderlying(tokenIn, _safu, safuFee);
+            _pushUnderlying(tokenIn, _safu, safuFee);
+            emit LOG_SAFU(tokenIn, safuFee);
         }
 
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountIn, spotPriceAfter);
     }
 
@@ -734,13 +724,13 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = poolAmountIn.bmul(_exitFee);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
         _burnPoolShare(poolAmountIn.bsub(exitFee));
-        _pushPoolShare(_factory, exitFee);
+        _pushPoolShare(_safu, exitFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return tokenAmountOut;
@@ -774,13 +764,13 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = poolAmountIn.bmul(_exitFee);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
         _burnPoolShare(poolAmountIn.bsub(exitFee));
-        _pushPoolShare(_factory, exitFee);
+        _pushPoolShare(_safu, exitFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return poolAmountIn;
@@ -789,7 +779,6 @@ contract XPool is XApollo, XPToken, XConst {
     // ==
     // 'Underlying' token-manipulation functions make external calls but are NOT locked
     // You must `_lock_` or otherwise ensure reentry-safety
-
     function _pullUnderlying(
         address erc20,
         address from,

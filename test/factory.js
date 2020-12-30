@@ -24,8 +24,8 @@ contract('XFactory', async (accounts) => {
 
         before(async () => {
             factory = await XFactory.deployed();
-            weth = await TToken.new('Wrapped Ether', 'WETH', 18);
-            dai = await TToken.new('Dai Stablecoin', 'DAI', 18);
+            weth = await TToken.new('Wrapped Ether', 'WETH', 18, admin);
+            dai = await TToken.new('Dai Stablecoin', 'DAI', 18, admin);
 
             WETH = weth.address;
             DAI = dai.address;
@@ -90,7 +90,7 @@ contract('XFactory', async (accounts) => {
 
         it('admin changes core address', async () => {
             let result = await factory.setCore(user2);
-            truffleAssert.eventEmitted(result, "CoreTransferred");
+            truffleAssert.eventEmitted(result, "SET_CORE");
 
             const core = await factory.getCore();
             assert.equal(core, user2);

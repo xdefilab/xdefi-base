@@ -10,7 +10,7 @@ contract XFactory is XApollo {
     mapping(address => bool) private _isPool;
 
     event LOG_NEW_POOL(address indexed caller, address indexed pool);
-    event CoreTransferred(address indexed core, address indexed coreNew);
+    event SET_CORE(address indexed core, address indexed coreNew);
 
     modifier onlyCore() {
         require(msg.sender == core, "Not Authorized");
@@ -33,12 +33,8 @@ contract XFactory is XApollo {
         return xpool;
     }
 
-    function getCore() external view returns (address) {
-        return core;
-    }
-
     function setCore(address _core) public onlyCore {
-        emit CoreTransferred(core, _core);
+        emit SET_CORE(core, _core);
         core = _core;
     }
 

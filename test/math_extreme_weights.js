@@ -90,8 +90,8 @@ contract('XPool', async (accounts) => {
         await factory.newXPool();
         pool = await XPool.at(POOL);
 
-        weth = await TToken.new('Wrapped Ether', 'WETH', 18);
-        dai = await TToken.new('Dai Stablecoin', 'DAI', 18);
+        weth = await TToken.new('Wrapped Ether', 'WETH', 18, admin);
+        dai = await TToken.new('Dai Stablecoin', 'DAI', 18, admin);
 
         WETH = weth.address;
         DAI = dai.address;
