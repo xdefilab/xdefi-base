@@ -34,6 +34,7 @@ contract XPool is XApollo, XPToken, XConst {
     );
 
     event LOG_REFER(address indexed ref, address indexed tokenIn, uint256 fee);
+    event LOG_SAFU(address indexed tokenIn, uint256 fee);
 
     event LOG_JOIN(
         address indexed caller,
@@ -489,10 +490,7 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountOut
         );
 
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee);
 
         uint256 referFee = 0;
         if (
@@ -500,8 +498,8 @@ contract XPool is XApollo, XPToken, XConst {
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = swapFee.bdiv(5);
-            //_pushUnderlying(tokenIn, referrer, referFee);
+            referFee = swapFee / 5;
+            _pushUnderlying(tokenIn, referrer, referFee);
             emit LOG_REFER(referrer, tokenIn, referFee);
         }
 
@@ -510,11 +508,16 @@ contract XPool is XApollo, XPToken, XConst {
         if (_farmXDEXCreator == _origin) {
             safuFee = swapFee.bsub(referFee);
         } else {
-            safuFee = tokenAmountIn.bdiv(2000);
+            safuFee = tokenAmountIn / 2000;
         }
+
         if (_safu != address(0)) {
-            //_pushUnderlying(tokenIn, _safu, safuFee);
+            _pushUnderlying(tokenIn, _safu, safuFee);
+            emit LOG_SAFU(tokenIn, safuFee);
         }
+
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return (tokenAmountOut, spotPriceAfter);
     }
@@ -588,10 +591,7 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountOut
         );
 
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee);
 
         uint256 referFee = 0;
         if (
@@ -599,23 +599,26 @@ contract XPool is XApollo, XPToken, XConst {
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = swapFee.bdiv(5);
+            referFee = swapFee / 5;
             _pushUnderlying(tokenIn, referrer, referFee);
             emit LOG_REFER(referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee;
+        uint256 safuFee = 0;
         //is farm pool
         if (_farmXDEXCreator == _origin) {
             safuFee = swapFee.bsub(referFee);
         } else {
-            safuFee = swapFee.bdiv(2000);
+            safuFee = tokenAmountIn / 2000;
         }
 
         if (_safu != address(0)) {
             _pushUnderlying(tokenIn, _safu, safuFee);
+            emit LOG_SAFU(tokenIn, safuFee);
         }
 
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountIn, spotPriceAfter);
     }
 
