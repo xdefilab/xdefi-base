@@ -92,7 +92,7 @@ contract('XFactory', async (accounts) => {
             let result = await factory.setCore(user2);
             truffleAssert.eventEmitted(result, "SET_CORE");
 
-            const core = await factory.getCore();
+            const core = await factory.core();
             assert.equal(core, user2);
         });
     });

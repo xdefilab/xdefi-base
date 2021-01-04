@@ -192,7 +192,7 @@ contract XPool is XApollo, XPToken, XConst {
     }
 
     function setExitFee(uint256 exitFee) external _logs_ _lock_ {
-        require(msg.sender == _farmXDEXCreator, "ERR_NOT_CONTROLLER");
+        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
         bool found = false;
         if (exitFee == EXIT_ZERO_FEE || exitFee == EXIT_VOTING_POOL_FEE) {
             found = true;
