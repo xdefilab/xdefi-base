@@ -12,9 +12,6 @@ contract XConst {
     //Secure Asset Fund for Users(SAFU)
     uint256 public constant SAFU_FEE = (5 * BONE) / 10000;
 
-    uint256 public constant EXIT_ZERO_FEE = 0;
-    uint256 public constant EXIT_VOTING_POOL_FEE = BONE / 100;
-
     uint256 public constant MIN_WEIGHT = BONE;
     uint256 public constant MAX_WEIGHT = BONE * 50;
     uint256 public constant MAX_TOTAL_WEIGHT = BONE * 50;
