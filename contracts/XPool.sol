@@ -75,13 +75,12 @@ contract XPool is XApollo, XPToken, XConst {
     // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
     uint256 public _swapFee;
     bool private _finalized;
-    uint256 public _exitFee;
 
     address[] private _tokens;
     mapping(address => Record) private _records;
     uint256 private _totalWeight;
 
-    // SAFU address; also push token exitFee to this address
+    // SAFU address
     address public constant _safu = 0x6db3A50418cE4B09c3133bb4fa57E4BE98E21662;
 
     // (tx.origin == _farmXDEXCreator) is xdex farm pool
@@ -95,7 +94,6 @@ contract XPool is XApollo, XPToken, XConst {
         _swapFee = MIN_FEE;
         _publicSwap = false;
         _finalized = false;
-        _exitFee = EXIT_ZERO_FEE;
     }
 
     function isPublicSwap() external view returns (bool) {
@@ -173,6 +171,7 @@ contract XPool is XApollo, XPToken, XConst {
         return _records[token].balance;
     }
 
+    //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
     function setSwapFee(uint256 swapFee) external _logs_ _lock_ {
         require(!_finalized, "ERR_IS_FINALIZED");
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
@@ -268,17 +267,8 @@ contract XPool is XApollo, XPToken, XConst {
         if (balance > oldBalance) {
             _pullUnderlying(token, msg.sender, balance.bsub(oldBalance));
         } else if (balance < oldBalance) {
-            // In this case liquidity is being withdrawn, so charge EXIT_FEE
             uint256 tokenBalanceWithdrawn = oldBalance.bsub(balance);
-            uint256 tokenExitFee = tokenBalanceWithdrawn.bmul(_exitFee).bdiv(
-                BONE
-            );
-            _pushUnderlying(
-                token,
-                msg.sender,
-                tokenBalanceWithdrawn.bsub(tokenExitFee)
-            );
-            _pushUnderlying(token, _safu, tokenExitFee);
+            _pushUnderlying(token, msg.sender, tokenBalanceWithdrawn);
         }
     }
 
@@ -288,7 +278,6 @@ contract XPool is XApollo, XPToken, XConst {
         require(!_finalized, "ERR_IS_FINALIZED");
 
         uint256 tokenBalance = _records[token].balance;
-        uint256 tokenExitFee = tokenBalance.bmul(_exitFee).bdiv(BONE);
 
         _totalWeight = _totalWeight.bsub(_records[token].denorm);
 
@@ -306,8 +295,7 @@ contract XPool is XApollo, XPToken, XConst {
             balance: 0
         });
 
-        _pushUnderlying(token, msg.sender, tokenBalance.bsub(tokenExitFee));
-        _pushUnderlying(token, _safu, tokenExitFee);
+        _pushUnderlying(token, msg.sender, tokenBalance);
     }
 
     // Absorb any tokens that have been sent to this contract into the pool
@@ -389,14 +377,11 @@ contract XPool is XApollo, XPToken, XConst {
         require(_finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
-        uint256 pAiAfterExitFee = poolAmountIn.bsub(exitFee);
-        uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
+        uint256 ratio = poolAmountIn.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _pushPoolShare(_safu, exitFee);
-        _burnPoolShare(pAiAfterExitFee);
+        _burnPoolShare(poolAmountIn);
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
@@ -711,13 +696,10 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
-
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn.bsub(exitFee));
-        _pushPoolShare(_safu, exitFee);
+        _burnPoolShare(poolAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return tokenAmountOut;
@@ -751,13 +733,10 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
-
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn.bsub(exitFee));
-        _pushPoolShare(_safu, exitFee);
+        _burnPoolShare(poolAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
 
         return poolAmountIn;
