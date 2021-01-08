@@ -37,10 +37,4 @@ contract XFactory is XApollo {
         emit SET_CORE(core, _core);
         core = _core;
     }
-
-    function collect(XPool pool) external onlyCore {
-        uint256 collected = IERC20(pool).balanceOf(address(this));
-        bool xfer = pool.transfer(core, collected);
-        require(xfer, "ERR_ERC20_FAILED");
-    }
 }
