@@ -34,7 +34,6 @@ contract XPool is XApollo, XPToken, XConst {
     );
 
     event LOG_REFER(address indexed ref, address indexed tokenIn, uint256 fee);
-    event LOG_SAFU(address indexed tokenIn, uint256 fee);
 
     event LOG_JOIN(
         address indexed caller,
@@ -189,16 +188,6 @@ contract XPool is XApollo, XPToken, XConst {
         require(found, "ERR_INVALID_SWAP_FEE");
 
         _swapFee = swapFee;
-    }
-
-    function setExitFee(uint256 exitFee) external _logs_ _lock_ {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        bool found = false;
-        if (exitFee == EXIT_ZERO_FEE || exitFee == EXIT_VOTING_POOL_FEE) {
-            found = true;
-        }
-        require(found, "ERR_INVALID_EXIT_FEE");
-        _exitFee = exitFee;
     }
 
     function setController(address manager) external _logs_ _lock_ {
@@ -513,7 +502,6 @@ contract XPool is XApollo, XPToken, XConst {
 
         if (_safu != address(0)) {
             _pushUnderlying(tokenIn, _safu, safuFee);
-            emit LOG_SAFU(tokenIn, safuFee);
         }
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
@@ -614,7 +602,6 @@ contract XPool is XApollo, XPToken, XConst {
 
         if (_safu != address(0)) {
             _pushUnderlying(tokenIn, _safu, safuFee);
-            emit LOG_SAFU(tokenIn, safuFee);
         }
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
