@@ -1,5 +1,6 @@
 pragma solidity 0.5.17;
 
+import "./XVersion.sol";
 import "./lib/XNum.sol";
 
 // Highly opinionated token implementation
@@ -63,7 +64,7 @@ contract XTokenBase {
     }
 }
 
-contract XPToken is XTokenBase, IERC20 {
+contract XPToken is XTokenBase, IERC20, XApollo {
     using XNum for uint256;
 
     string private _name = "XDeFi Pool Token";
