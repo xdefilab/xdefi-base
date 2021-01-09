@@ -33,7 +33,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
-    event LOG_REFER(address indexed ref, address indexed tokenIn, uint256 fee);
+    event LOG_REFER(address indexed caller, address indexed ref, address indexed tokenIn, uint256 fee);
 
     event LOG_JOIN(
         address indexed caller,
@@ -47,7 +47,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
-    event LOG_CALL(bytes4 indexed sig, address indexed caller, bytes data);
+    event LOG_CALL(bytes4 indexed sig, address indexed caller, bytes data) anonymous;
 
     modifier _logs_() {
         emit LOG_CALL(msg.sig, msg.sender, msg.data);
@@ -69,12 +69,12 @@ contract XPool is XApollo, XPToken, XConst {
     bool private _mutex;
 
     address public _controller; // has CONTROL role
-    bool private _publicSwap; // true if PUBLIC can call SWAP functions
+    bool public _publicSwap; // true if PUBLIC can call SWAP functions
 
     // `setSwapFee` and `finalize` require CONTROL
     // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
     uint256 public _swapFee;
-    bool private _finalized;
+    bool public _finalized;
 
     address[] private _tokens;
     mapping(address => Record) private _records;
@@ -94,14 +94,6 @@ contract XPool is XApollo, XPToken, XConst {
         _swapFee = MIN_FEE;
         _publicSwap = false;
         _finalized = false;
-    }
-
-    function isPublicSwap() external view returns (bool) {
-        return _publicSwap;
-    }
-
-    function isFinalized() external view returns (bool) {
-        return _finalized;
     }
 
     function isBound(address t) external view returns (bool) {
@@ -474,7 +466,7 @@ contract XPool is XApollo, XPToken, XConst {
         ) {
             referFee = swapFee / 5;
             _pushUnderlying(tokenIn, referrer, referFee);
-            emit LOG_REFER(referrer, tokenIn, referFee);
+            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
         uint256 safuFee = 0;
@@ -574,7 +566,7 @@ contract XPool is XApollo, XPToken, XConst {
         ) {
             referFee = swapFee / 5;
             _pushUnderlying(tokenIn, referrer, referFee);
-            emit LOG_REFER(referrer, tokenIn, referFee);
+            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
         uint256 safuFee = 0;
