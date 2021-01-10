@@ -742,8 +742,14 @@ contract XPool is XApollo, XPToken, XConst {
         address from,
         uint256 amount
     ) internal {
-        bool xfer = IERC20(erc20).transferFrom(from, address(this), amount);
-        require(xfer, "ERR_ERC20_FALSE");
+        require(_isContract(erc20),"not contract");
+        (bool success, bytes memory data) = erc20.call(
+            abi.encodeWithSelector(0x23b872dd, from, address(this), amount)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "ERC20_TRANSFER_FROM_FAILED"
+        );
     }
 
     function _pushUnderlying(
@@ -751,8 +757,14 @@ contract XPool is XApollo, XPToken, XConst {
         address to,
         uint256 amount
     ) internal {
-        bool xfer = IERC20(erc20).transfer(to, amount);
-        require(xfer, "ERR_ERC20_FALSE");
+        require(_isContract(erc20),"not contract");
+        (bool success, bytes memory data) = erc20.call(
+            abi.encodeWithSelector(0xa9059cbb, to, amount)
+        );
+        require(
+            success && (data.length == 0 || abi.decode(data, (bool))),
+            "ERC20_TRANSFER_FAILED"
+        );
     }
 
     function _pullPoolShare(address from, uint256 amount) internal {
@@ -769,5 +781,16 @@ contract XPool is XApollo, XPToken, XConst {
 
     function _burnPoolShare(uint256 amount) internal {
         _burn(amount);
+    }
+
+    function _isContract(address token) internal view returns (bool) {
+        if (token == address(0x0)) {
+            return false;
+        }
+        uint256 size;
+        assembly {
+            size := extcodesize(token)
+        }
+        return size > 0;
     }
 }
