@@ -1,3 +1,16 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 pragma solidity 0.5.17;
 
 import "./XNum.sol";
@@ -124,41 +137,6 @@ library XMath {
     }
 
     /**********************************************************************************************
-    // calcSingleInGivenPoolOut                                                                  //
-    // tAi = tokenAmountIn              //(pS + pAo)\     /    1    \\                           //
-    // pS = poolSupply                 || ---------  | ^ | --------- || * bI - bI                //
-    // pAo = poolAmountOut              \\    pS    /     \(wI / tW)//                           //
-    // bI = balanceIn          tAi =  --------------------------------------------               //
-    // wI = weightIn                              /      wI  \                                   //
-    // tW = totalWeight                          |  1 - ----  |  * sF                            //
-    // sF = swapFee                               \      tW  /                                   //
-    **********************************************************************************************/
-    function calcSingleInGivenPoolOut(
-        uint256 tokenBalanceIn,
-        uint256 tokenWeightIn,
-        uint256 poolSupply,
-        uint256 totalWeight,
-        uint256 poolAmountOut,
-        uint256 swapFee
-    ) public pure returns (uint256 tokenAmountIn) {
-        uint256 normalizedWeight = tokenWeightIn.bdiv(totalWeight);
-        uint256 newPoolSupply = poolSupply.badd(poolAmountOut);
-        uint256 poolRatio = newPoolSupply.bdiv(poolSupply);
-
-        //uint newBalTi = poolRatio^(1/weightTi) * balTi;
-        uint256 boo = BONE.bdiv(normalizedWeight);
-        uint256 tokenInRatio = poolRatio.bpow(boo);
-        uint256 newTokenBalanceIn = tokenInRatio.bmul(tokenBalanceIn);
-        uint256 tokenAmountInAfterFee = newTokenBalanceIn.bsub(tokenBalanceIn);
-        // Do reverse order of fees charged in joinswap_ExternAmountIn, this way
-        //     ``` pAo == joinswap_ExternAmountIn(Ti, joinswap_PoolAmountOut(pAo, Ti)) ```
-        //uint tAi = tAiAfterFee / (1 - (1-weightTi) * swapFee) ;
-        uint256 zar = (BONE.bsub(normalizedWeight)).bmul(swapFee);
-        tokenAmountIn = tokenAmountInAfterFee.bdiv(BONE.bsub(zar));
-        return tokenAmountIn;
-    }
-
-    /**********************************************************************************************
     // calcSingleOutGivenPoolIn                                                                  //
     // tAo = tokenAmountOut            /      /                                             \\   //
     // bO = tokenBalanceOut           /      // pS - (pAi * (1 - eF)) \     /    1    \      \\  //
@@ -199,49 +177,5 @@ library XMath {
         uint256 zaz = BONE.bsub(normalizedWeight).bmul(swapFee);
         tokenAmountOut = tokenAmountOutBeforeSwapFee.bmul(BONE.bsub(zaz));
         return tokenAmountOut;
-    }
-
-    /**********************************************************************************************
-    // calcPoolInGivenSingleOut                                                                  //
-    // pAi = poolAmountIn               // /               tAo             \\     / wO \     \   //
-    // bO = tokenBalanceOut            // | bO - -------------------------- |\   | ---- |     \  //
-    // tAo = tokenAmountOut      pS - ||   \     1 - ((1 - (tO / tW)) * sF)/  | ^ \ tW /  * pS | //
-    // ps = poolSupply                 \\ -----------------------------------/                /  //
-    // wO = tokenWeightOut  pAi =       \\               bO                 /                /   //
-    // tW = totalWeight           -------------------------------------------------------------  //
-    // sF = swapFee                                        ( 1 - eF )                            //
-    // eF = exitFee                                                                              //
-    **********************************************************************************************/
-    function calcPoolInGivenSingleOut(
-        uint256 tokenBalanceOut,
-        uint256 tokenWeightOut,
-        uint256 poolSupply,
-        uint256 totalWeight,
-        uint256 tokenAmountOut,
-        uint256 swapFee
-    ) public pure returns (uint256 poolAmountIn) {
-        // charge swap fee on the output token side
-        uint256 normalizedWeight = tokenWeightOut.bdiv(totalWeight);
-        //uint tAoBeforeSwapFee = tAo / (1 - (1-weightTo) * swapFee) ;
-        uint256 zoo = BONE.bsub(normalizedWeight);
-        uint256 zar = zoo.bmul(swapFee);
-        uint256 tokenAmountOutBeforeSwapFee = tokenAmountOut.bdiv(
-            BONE.bsub(zar)
-        );
-
-        uint256 newTokenBalanceOut = tokenBalanceOut.bsub(
-            tokenAmountOutBeforeSwapFee
-        );
-        uint256 tokenOutRatio = newTokenBalanceOut.bdiv(tokenBalanceOut);
-
-        //uint newPoolSupply = (ratioTo ^ weightTo) * poolSupply;
-        uint256 poolRatio = tokenOutRatio.bpow(normalizedWeight);
-        uint256 newPoolSupply = poolRatio.bmul(poolSupply);
-        uint256 poolAmountInAfterExitFee = poolSupply.bsub(newPoolSupply);
-
-        // charge exit fee on the pool token side
-        // pAi = pAiAfterExitFee/(1-exitFee)
-        poolAmountIn = poolAmountInAfterExitFee.bdiv(BONE.bsub(EXIT_ZERO_FEE));
-        return poolAmountIn;
     }
 }

@@ -33,7 +33,12 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
-    event LOG_REFER(address indexed caller, address indexed ref, address indexed tokenIn, uint256 fee);
+    event LOG_REFER(
+        address indexed caller,
+        address indexed ref,
+        address indexed tokenIn,
+        uint256 fee
+    );
 
     event LOG_JOIN(
         address indexed caller,
@@ -47,7 +52,8 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
-    event LOG_CALL(bytes4 indexed sig, address indexed caller, bytes data) anonymous;
+    //anonymous event
+    event LOG_CALL(bytes4 indexed sig, address indexed caller, bytes data);
 
     modifier _logs_() {
         emit LOG_CALL(msg.sig, msg.sender, msg.data);
@@ -67,33 +73,38 @@ contract XPool is XApollo, XPToken, XConst {
     }
 
     bool private _mutex;
-
     address public _controller; // has CONTROL role
-    bool public _publicSwap; // true if PUBLIC can call SWAP functions
 
     // `setSwapFee` and `finalize` require CONTROL
     // `finalize` sets `PUBLIC can SWAP`, `PUBLIC can JOIN`
     uint256 public _swapFee;
+    uint256 public _exitFee;
     bool public _finalized;
 
-    address[] private _tokens;
-    mapping(address => Record) private _records;
+    address[] internal _tokens;
+    mapping(address => Record) internal _records;
     uint256 private _totalWeight;
 
     // SAFU address
-    address public constant _safu = 0x6db3A50418cE4B09c3133bb4fa57E4BE98E21662;
+    address public _safu = 0x6db3A50418cE4B09c3133bb4fa57E4BE98E21662;
+    address public _farmCreator = 0xa1cfB221AC318F751892345D87b9F4E91227Bc1C;
 
-    // (tx.origin == _farmXDEXCreator) is xdex farm pool
+    // (tx.origin == _farmCreator) is xdex farm pool
     address public _origin;
-    address
-        public constant _farmXDEXCreator = 0xa1cfB221AC318F751892345D87b9F4E91227Bc1C;
 
     constructor() public {
         _controller = msg.sender;
         _origin = tx.origin;
-        _swapFee = MIN_FEE;
-        _publicSwap = false;
+        _swapFee = SWAP_FEES[1]; //0.3%
+        _exitFee = EXIT_ZERO_FEE;
         _finalized = false;
+    }
+
+    function setExitFee(uint256 newFee) external _logs_ {
+        require(!_finalized, "ERR_IS_FINALIZED");
+        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+        require(_exitFee <= MAX_EXIT_FEE, "INVALID_EXIT_FEE");
+        _exitFee = newFee;
     }
 
     function isBound(address t) external view returns (bool) {
@@ -163,12 +174,21 @@ contract XPool is XApollo, XPToken, XConst {
         return _records[token].balance;
     }
 
-    //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
-    function setSwapFee(uint256 swapFee) external _logs_ _lock_ {
-        require(!_finalized, "ERR_IS_FINALIZED");
+    function setController(address manager) external _logs_ {
         require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(swapFee >= MIN_FEE, "ERR_MIN_FEE");
-        require(swapFee <= MAX_FEE, "ERR_MAX_FEE");
+        _controller = manager;
+    }
+
+    //Swap Fee must be one of {0.1%, 0.3%, 1%, 3%, 10%}
+    function finalize(uint256 swapFee) external _logs_ {
+        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
+        require(!_finalized, "ERR_IS_FINALIZED");
+        require(_tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(_tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
+
+        require(swapFee >= SWAP_FEES[0], "ERR_MIN_FEE");
+        require(swapFee <= SWAP_FEES[4], "ERR_MAX_FEE");
+
         bool found = false;
         for (uint256 i = 0; i < SWAP_FEES.length; i++) {
             if (swapFee == SWAP_FEES[i]) {
@@ -177,29 +197,10 @@ contract XPool is XApollo, XPToken, XConst {
             }
         }
         require(found, "ERR_INVALID_SWAP_FEE");
-
         _swapFee = swapFee;
-    }
-
-    function setController(address manager) external _logs_ _lock_ {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        _controller = manager;
-    }
-
-    function setPublicSwap(bool public_) external _logs_ _lock_ {
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        _publicSwap = public_;
-    }
-
-    function finalize() external _logs_ _lock_ {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(!_finalized, "ERR_IS_FINALIZED");
-        require(_tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
-        require(_tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
         _finalized = true;
-        _publicSwap = true;
+        //_publicSwap = true;
 
         _mintPoolShare(INIT_POOL_SUPPLY);
         _pushPoolShare(msg.sender, INIT_POOL_SUPPLY);
@@ -259,35 +260,18 @@ contract XPool is XApollo, XPToken, XConst {
         if (balance > oldBalance) {
             _pullUnderlying(token, msg.sender, balance.bsub(oldBalance));
         } else if (balance < oldBalance) {
+            // In this case liquidity is being withdrawn, so charge EXIT_FEE
             uint256 tokenBalanceWithdrawn = oldBalance.bsub(balance);
-            _pushUnderlying(token, msg.sender, tokenBalanceWithdrawn);
+            uint256 tokenExitFee = tokenBalanceWithdrawn.bmul(_exitFee).bdiv(
+                BONE
+            );
+            _pushUnderlying(
+                token,
+                msg.sender,
+                tokenBalanceWithdrawn.bsub(tokenExitFee)
+            );
+            _pushUnderlying(token, _safu, tokenExitFee);
         }
-    }
-
-    function unbind(address token) external _logs_ _lock_ {
-        require(msg.sender == _controller, "ERR_NOT_CONTROLLER");
-        require(_records[token].bound, "ERR_NOT_BOUND");
-        require(!_finalized, "ERR_IS_FINALIZED");
-
-        uint256 tokenBalance = _records[token].balance;
-
-        _totalWeight = _totalWeight.bsub(_records[token].denorm);
-
-        // Swap the token-to-unbind with the last token,
-        // then delete the last token
-        uint256 index = _records[token].index;
-        uint256 last = _tokens.length - 1;
-        _tokens[index] = _tokens[last];
-        _records[_tokens[index]].index = index;
-        _tokens.pop();
-        _records[token] = Record({
-            bound: false,
-            index: 0,
-            denorm: 0,
-            balance: 0
-        });
-
-        _pushUnderlying(token, msg.sender, tokenBalance);
     }
 
     // Absorb any tokens that have been sent to this contract into the pool
@@ -338,7 +322,6 @@ contract XPool is XApollo, XPToken, XConst {
 
     function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
         external
-        _logs_
         _lock_
     {
         require(_finalized, "ERR_NOT_FINALIZED");
@@ -363,16 +346,20 @@ contract XPool is XApollo, XPToken, XConst {
 
     function exitPool(uint256 poolAmountIn, uint256[] calldata minAmountsOut)
         external
-        _logs_
         _lock_
     {
         require(_finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 ratio = poolAmountIn.bdiv(poolTotal);
+        uint256 exitFee = poolAmountIn.bmul(_exitFee);
+        uint256 pAiAfterExitFee = poolAmountIn.bsub(exitFee);
+        uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         _pullPoolShare(msg.sender, poolAmountIn);
+        if (_exitFee > 0) {
+            _pushPoolShare(_origin, exitFee);
+        }
         _burnPoolShare(poolAmountIn);
 
         for (uint256 i = 0; i < _tokens.length; i++) {
@@ -394,15 +381,10 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 minAmountOut,
         uint256 maxPrice,
         address referrer
-    )
-        external
-        _logs_
-        _lock_
-        returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
-    {
+    ) external _lock_ returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
-        require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
+        //require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
 
         Record storage inRecord = _records[address(tokenIn)];
         Record storage outRecord = _records[address(tokenOut)];
@@ -456,34 +438,32 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountOut
         );
 
-        uint256 swapFee = tokenAmountIn.bmul(_swapFee);
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+
+        //referral
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = swapFee / 5;
+            referFee = swapFee / 5; // 20%
             _pushUnderlying(tokenIn, referrer, referFee);
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
         uint256 safuFee = 0;
         //is farm pool
-        if (_farmXDEXCreator == _origin) {
-            safuFee = swapFee.bsub(referFee);
+        if (_farmCreator == _origin) {
+            safuFee = swapFee.bsub(referFee); // 80%
         } else {
-            safuFee = tokenAmountIn / 2000;
+            safuFee = tokenAmountIn / 2000; // 0.05%
         }
+        _pushUnderlying(tokenIn, _safu, safuFee);
 
-        if (_safu != address(0)) {
-            _pushUnderlying(tokenIn, _safu, safuFee);
-        }
-
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
         return (tokenAmountOut, spotPriceAfter);
     }
 
@@ -494,15 +474,10 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut,
         uint256 maxPrice,
         address referrer
-    )
-        external
-        _logs_
-        _lock_
-        returns (uint256 tokenAmountIn, uint256 spotPriceAfter)
-    {
+    ) external _lock_ returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
-        require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
+        //require(_publicSwap, "ERR_SWAP_NOT_PUBLIC");
 
         Record storage inRecord = _records[address(tokenIn)];
         Record storage outRecord = _records[address(tokenOut)];
@@ -556,32 +531,31 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountOut
         );
 
-        uint256 swapFee = tokenAmountIn.bmul(_swapFee);
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
+        uint256 swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE);
+
+        //referral
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = swapFee / 5;
+            referFee = swapFee / 5; // 20%
             _pushUnderlying(tokenIn, referrer, referFee);
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
         uint256 safuFee = 0;
         //is farm pool
-        if (_farmXDEXCreator == _origin) {
-            safuFee = swapFee.bsub(referFee);
+        if (_farmCreator == _origin) {
+            safuFee = swapFee.bsub(referFee); // 80%
         } else {
-            safuFee = tokenAmountIn / 2000;
+            safuFee = tokenAmountIn / 2000; // 0.05%
         }
+        _pushUnderlying(tokenIn, _safu, safuFee);
 
-        if (_safu != address(0)) {
-            _pushUnderlying(tokenIn, _safu, safuFee);
-        }
-
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountIn, spotPriceAfter);
     }
@@ -590,7 +564,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenIn,
         uint256 tokenAmountIn,
         uint256 minPoolAmountOut
-    ) external _logs_ _lock_ returns (uint256 poolAmountOut) {
+    ) external _lock_ returns (uint256 poolAmountOut) {
         require(_finalized, "ERR_NOT_FINALIZED");
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(
@@ -616,48 +590,20 @@ contract XPool is XApollo, XPToken, XConst {
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
 
         _mintPoolShare(poolAmountOut);
-        _pushPoolShare(msg.sender, poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
+        //TODO: in same function
+        uint256 swapFee = 0;
+        //is farm pool
+        if (_farmCreator == _origin) {
+            swapFee = tokenAmountIn.bmul(_swapFee).bdiv(BONE); // 100%
+        } else {
+            swapFee = tokenAmountIn / 2000; // 0.05%
+        }
+        _pushUnderlying(tokenIn, _safu, swapFee);
+
+        _pushPoolShare(msg.sender, poolAmountOut);
         return poolAmountOut;
-    }
-
-    function joinswapPoolAmountOut(
-        address tokenIn,
-        uint256 poolAmountOut,
-        uint256 maxAmountIn
-    ) external _logs_ _lock_ returns (uint256 tokenAmountIn) {
-        require(_finalized, "ERR_NOT_FINALIZED");
-        require(_records[tokenIn].bound, "ERR_NOT_BOUND");
-
-        Record storage inRecord = _records[tokenIn];
-
-        tokenAmountIn = XMath.calcSingleInGivenPoolOut(
-            inRecord.balance,
-            inRecord.denorm,
-            _totalSupply,
-            _totalWeight,
-            poolAmountOut,
-            _swapFee
-        );
-
-        require(tokenAmountIn != 0, "ERR_MATH_APPROX");
-        require(tokenAmountIn <= maxAmountIn, "ERR_LIMIT_IN");
-
-        require(
-            tokenAmountIn <= (_records[tokenIn].balance).bmul(MAX_IN_RATIO),
-            "ERR_MAX_IN_RATIO"
-        );
-
-        inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
-
-        emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
-
-        _mintPoolShare(poolAmountOut);
-        _pushPoolShare(msg.sender, poolAmountOut);
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-
-        return tokenAmountIn;
     }
 
     function exitswapPoolAmountIn(
@@ -688,61 +634,39 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
+        uint256 exitFee = poolAmountIn.bmul(_exitFee).bdiv(BONE);
+
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
+        _burnPoolShare(poolAmountIn.bsub(exitFee));
+        if (exitFee > 0) {
+            _pushPoolShare(_origin, exitFee);
+        }
 
+        uint256 swapFee = 0;
+        //is farm pool
+        if (_farmCreator == _origin) {
+            swapFee = tokenAmountOut.bmul(_swapFee).bdiv(BONE); // 100%
+        } else {
+            swapFee = tokenAmountOut / 2000; // 0.05%
+        }
+        _pushUnderlying(tokenOut, _safu, swapFee);
+
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return tokenAmountOut;
-    }
-
-    function exitswapExternAmountOut(
-        address tokenOut,
-        uint256 tokenAmountOut,
-        uint256 maxPoolAmountIn
-    ) external _logs_ _lock_ returns (uint256 poolAmountIn) {
-        require(_finalized, "ERR_NOT_FINALIZED");
-        require(_records[tokenOut].bound, "ERR_NOT_BOUND");
-        require(
-            tokenAmountOut <= (_records[tokenOut].balance).bmul(MAX_OUT_RATIO),
-            "ERR_MAX_OUT_RATIO"
-        );
-
-        Record storage outRecord = _records[tokenOut];
-
-        poolAmountIn = XMath.calcPoolInGivenSingleOut(
-            outRecord.balance,
-            outRecord.denorm,
-            _totalSupply,
-            _totalWeight,
-            tokenAmountOut,
-            _swapFee
-        );
-
-        require(poolAmountIn != 0, "ERR_MATH_APPROX");
-        require(poolAmountIn <= maxPoolAmountIn, "ERR_LIMIT_IN");
-
-        outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
-
-        emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
-
-        _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
-
-        return poolAmountIn;
     }
 
     // ==
     // 'Underlying' token-manipulation functions make external calls but are NOT locked
     // You must `_lock_` or otherwise ensure reentry-safety
+    // Fixed ERC-20 transfer revert for some special token such as USDT
     function _pullUnderlying(
         address erc20,
         address from,
         uint256 amount
     ) internal {
-        require(_isContract(erc20),"not contract");
+        // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
         (bool success, bytes memory data) = erc20.call(
             abi.encodeWithSelector(0x23b872dd, from, address(this), amount)
         );
@@ -757,7 +681,7 @@ contract XPool is XApollo, XPToken, XConst {
         address to,
         uint256 amount
     ) internal {
-        require(_isContract(erc20),"not contract");
+        // bytes4(keccak256(bytes('transfer(address,uint256)')));
         (bool success, bytes memory data) = erc20.call(
             abi.encodeWithSelector(0xa9059cbb, to, amount)
         );
@@ -781,16 +705,5 @@ contract XPool is XApollo, XPToken, XConst {
 
     function _burnPoolShare(uint256 amount) internal {
         _burn(amount);
-    }
-
-    function _isContract(address token) internal view returns (bool) {
-        if (token == address(0x0)) {
-            return false;
-        }
-        uint256 size;
-        assembly {
-            size := extcodesize(token)
-        }
-        return size > 0;
     }
 }

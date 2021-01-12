@@ -1,11 +1,17 @@
 pragma solidity 0.5.17;
 
-// Builds new XPools, logging their addresses and providing `isXPool(address) -> (bool)`
+// Builds new XPools, logging their addresses and providing `isPool(address) -> (bool)`
 import "./XVersion.sol";
 import "./XPool.sol";
+import "./IXConfig.sol";
+
+interface IXPoolCreator {
+    function newXPool() external returns (XPool);
+}
 
 contract XFactory is XApollo {
     address public core;
+    IXPoolCreator public xpoolCreator;
 
     mapping(address => bool) private _isPool;
 
@@ -26,15 +32,19 @@ contract XFactory is XApollo {
     }
 
     function newXPool() external returns (XPool) {
-        XPool xpool = new XPool();
+        XPool xpool = xpoolCreator.newXPool();
         _isPool[address(xpool)] = true;
         emit LOG_NEW_POOL(msg.sender, address(xpool));
         xpool.setController(msg.sender);
         return xpool;
     }
 
-    function setCore(address _core) public onlyCore {
-        emit SET_CORE(core, _core);
+    function setCore(address _core) external onlyCore {
         core = _core;
+        emit SET_CORE(core, _core);
+    }
+
+    function setPoolCreator(IXPoolCreator _xpoolCreator) external onlyCore {
+        xpoolCreator = _xpoolCreator;
     }
 }
