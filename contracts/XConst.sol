@@ -10,7 +10,6 @@ contract XConst {
     uint256 public constant SAFU_FEE = (5 * BONE) / 10000;
 
     uint256 public constant EXIT_ZERO_FEE = 0;
-    uint256 public constant MAX_EXIT_FEE = BONE / 100; // 0.1%
 
     uint256 public constant MIN_WEIGHT = BONE;
     uint256 public constant MAX_WEIGHT = BONE * 50;

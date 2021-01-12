@@ -6,25 +6,26 @@ import "./XPool.sol";
 import "./IXConfig.sol";
 
 interface IXPoolCreator {
-    function newXPool() external returns (XPool);
+    function newXPool(address config, address controller)
+        external
+        returns (XPool);
 }
 
 contract XFactory is XApollo {
-    address public core;
-    IXPoolCreator public xpoolCreator;
+    IXPoolCreator public creator;
+    IXConfig public xconfig;
 
     mapping(address => bool) private _isPool;
 
     event LOG_NEW_POOL(address indexed caller, address indexed pool);
-    event SET_CORE(address indexed core, address indexed coreNew);
+    event SET_CORE(address indexed core, address indexed _core);
+    event SET_CONFIG(address indexed conf, address indexed _conf);
+    event SET_XPOOL_CREATOR(address indexed creator, address indexed _creator);
 
-    modifier onlyCore() {
-        require(msg.sender == core, "Not Authorized");
-        _;
-    }
+    constructor(address _xconfig) public {
+        require(_xconfig != address(0), "ERR_ZERO_ADDR");
 
-    constructor() public {
-        core = msg.sender;
+        xconfig = IXConfig(_xconfig);
     }
 
     function isPool(address b) external view returns (bool) {
@@ -32,19 +33,28 @@ contract XFactory is XApollo {
     }
 
     function newXPool() external returns (XPool) {
-        XPool xpool = xpoolCreator.newXPool();
+        require(address(creator) != address(0), "ERR_ZERO_ADDR");
+
+        XPool xpool = creator.newXPool(address(xconfig), msg.sender);
         _isPool[address(xpool)] = true;
+
         emit LOG_NEW_POOL(msg.sender, address(xpool));
-        xpool.setController(msg.sender);
         return xpool;
     }
 
-    function setCore(address _core) external onlyCore {
-        core = _core;
-        emit SET_CORE(core, _core);
+    function setPoolCreator(address _creator) external {
+        require(msg.sender == xconfig.getCore(), "ERR_CORE_AUTH");
+        require(_creator != address(0), "ERR_ZERO_ADDR");
+
+        emit SET_XPOOL_CREATOR(address(creator), _creator);
+        creator = IXPoolCreator(_creator);
     }
 
-    function setPoolCreator(IXPoolCreator _xpoolCreator) external onlyCore {
-        xpoolCreator = _xpoolCreator;
+    function setConfig(address _config) external {
+        require(msg.sender == xconfig.getCore(), "ERR_CORE_AUTH");
+        require(_config != address(0), "ERR_ZERO_ADDR");
+
+        emit SET_CONFIG(address(xconfig), _config);
+        xconfig = IXConfig(_config);
     }
 }
