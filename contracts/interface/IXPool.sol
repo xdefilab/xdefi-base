@@ -30,11 +30,28 @@ interface IXPool {
         uint256 tokenAmountIn,
         address tokenOut,
         uint256 minAmountOut,
+        uint256 maxPrice
+    ) external returns (uint256 tokenAmountOut, uint256 spotPriceAfter);
+
+    function swapExactAmountOut(
+        address tokenIn,
+        uint256 maxAmountIn,
+        address tokenOut,
+        uint256 tokenAmountOut,
+        uint256 maxPrice
+    ) external returns (uint256 tokenAmountIn, uint256 spotPriceAfter);
+
+    // Referral
+    function swapExactAmountInRefer(
+        address tokenIn,
+        uint256 tokenAmountIn,
+        address tokenOut,
+        uint256 minAmountOut,
         uint256 maxPrice,
         address referrer
     ) external returns (uint256 tokenAmountOut, uint256 spotPriceAfter);
 
-    function swapExactAmountOut(
+    function swapExactAmountOutRefer(
         address tokenIn,
         uint256 maxAmountIn,
         address tokenOut,
@@ -43,24 +60,29 @@ interface IXPool {
         address referrer
     ) external returns (uint256 tokenAmountIn, uint256 spotPriceAfter);
 
-    // Pool Managment
+    // Pool Data
     function isBound(address token) external view returns (bool);
 
     function getFinalTokens() external view returns (address[] memory tokens);
 
     function getBalance(address token) external view returns (uint256);
 
+    function swapFee() external view returns (uint256);
+
+    function getDenormalizedWeight(address) external view returns (uint256);
+
+    function getTotalDenormalizedWeight() external view returns (uint256);
+
+    function getVersion() external view returns (bytes32);
+
+    // Pool Managment
     function setController(address controller) external;
 
     function setExitFee(uint256 newFee) external;
 
-    function finalize(uint256 swapFee) external;
+    function finalize(uint256 _swapFee) external;
 
-    function bind(
-        address token,
-        uint256 balance,
-        uint256 denorm
-    ) external;
+    function bind(address token, uint256 denorm) external;
 
     function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn)
         external;

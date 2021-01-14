@@ -6,9 +6,6 @@ contract XConst {
     uint256 public constant MIN_BOUND_TOKENS = 2;
     uint256 public constant MAX_BOUND_TOKENS = 8;
 
-    //Secure Asset Fund for Users(SAFU)
-    uint256 public constant SAFU_FEE = (5 * BONE) / 10000;
-
     uint256 public constant EXIT_ZERO_FEE = 0;
 
     uint256 public constant MIN_WEIGHT = BONE;

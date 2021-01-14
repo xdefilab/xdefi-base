@@ -5,6 +5,7 @@ contract XConfig {
 
     // Secure Asset Fund for Users(SAFU) address
     address private safu = address(0x6db3A50418cE4B09c3133bb4fa57E4BE98E21662);
+    uint256 public SAFU_FEE = (5 * BONE) / 10000;
 
     // XDEX Farm Pool Creator
     address private farmPoolCreator =
@@ -20,6 +21,7 @@ contract XConfig {
         address indexed farmPoolCreator,
         address indexed creatorNew
     );
+    event SET_SAFU_FEE(uint256 indexed fee, uint256 indexed feeNew);
 
     modifier onlyCore() {
         require(msg.sender == core, "ERR_CORE_AUTH");
@@ -47,6 +49,18 @@ contract XConfig {
         return maxExitFee;
     }
 
+    function getSafuFee() external view returns (uint256) {
+        return SAFU_FEE;
+    }
+
+    /**
+     * @dev returns the address used within the protocol to identify ETH
+     * @return the address assigned to ETH
+     */
+    function ethAddress() external pure returns (address) {
+        return 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    }
+
     function setCore(address _core) external onlyCore {
         require(_core != address(0), "ERR_ZERO_ADDR");
         emit SET_CORE(core, _core);
@@ -66,7 +80,13 @@ contract XConfig {
     }
 
     function setMaxExitFee(uint256 _fee) external onlyCore {
-        require(_fee < (BONE / 10), "INVALID_EXIT_FEE");
+        require(_fee <= (BONE / 10), "INVALID_EXIT_FEE");
         maxExitFee = _fee;
+    }
+
+    function setSafuFee(uint256 _fee) external onlyCore {
+        require(_fee <= (BONE / 10), "INVALID_SAFU_FEE");
+        emit SET_SAFU_FEE(SAFU_FEE, _fee);
+        SAFU_FEE = _fee;
     }
 }

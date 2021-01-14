@@ -1,31 +1,51 @@
 pragma solidity 0.5.17;
-
-import "./IXPool.sol";
-
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "./interface/IXPool.sol";
+import "./interface/IXFactory.sol";
+import "./interface/IXConfig.sol";
+
 // WETH9
-contract TokenInterface {
-    function balanceOf(address) public returns (uint256);
+interface IWETH {
+    function balanceOf(address account) external view returns (uint256);
 
-    function allowance(address, address) public returns (uint256);
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
 
-    function approve(address, uint256) public returns (bool);
+    function approve(address, uint256) external returns (bool);
 
-    function transfer(address, uint256) public returns (bool);
+    function transfer(address to, uint256 amount) external returns (bool);
 
     function transferFrom(
-        address,
-        address,
-        uint256
-    ) public returns (bool);
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
 
-    function deposit() public payable;
+    function deposit() external payable;
 
-    function withdraw(uint256) public;
+    function withdraw(uint256 amount) external;
 }
 
 contract XSwapProxyV1 {
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
+
+    uint256 public constant BONE = 10**18;
+    uint256 public constant MIN_BOUND_TOKENS = 2;
+    uint256 public constant MAX_BOUND_TOKENS = 8;
+
+    // WETH9
+    IWETH weth;
+
+    IXConfig public xconfig;
+
+    // Swap
     struct Swap {
         address pool;
         uint256 tokenInParam; // tokenInAmount / maxAmountIn / limitAmountIn
@@ -33,59 +53,55 @@ contract XSwapProxyV1 {
         uint256 maxPrice;
     }
 
-    event LOG_CALL(bytes4 indexed sig, address indexed caller, bytes data);
-
-    modifier _logs_() {
-        emit LOG_CALL(msg.sig, msg.sender, msg.data);
-        _;
+    constructor(address _weth, address _xconfig) public {
+        weth = IWETH(_weth);
+        xconfig = IXConfig(_xconfig);
     }
 
-    modifier _lock_() {
-        require(!_mutex, "ERR_REENTRY");
-        _mutex = true;
-        _;
-        _mutex = false;
-    }
+    function() external payable {}
 
-    bool private _mutex;
-    TokenInterface weth;
-
-    constructor(address _weth) public {
-        weth = TokenInterface(_weth);
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "ERR_ADD_OVERFLOW");
-        return c;
-    }
-
+    // Swap
     function batchSwapExactIn(
+        Swap[] memory swaps,
+        address tokenIn,
+        address tokenOut,
+        uint256 totalAmountIn,
+        uint256 minTotalAmountOut
+    ) public payable returns (uint256 totalAmountOut) {
+        return
+            batchSwapExactInRefer(
+                swaps,
+                tokenIn,
+                tokenOut,
+                totalAmountIn,
+                minTotalAmountOut,
+                address(0x0)
+            );
+    }
+
+    function batchSwapExactInRefer(
         Swap[] memory swaps,
         address tokenIn,
         address tokenOut,
         uint256 totalAmountIn,
         uint256 minTotalAmountOut,
         address referrer
-    ) public _logs_ _lock_ returns (uint256 totalAmountOut) {
-        TokenInterface TI = TokenInterface(tokenIn);
-        TokenInterface TO = TokenInterface(tokenOut);
+    ) public payable returns (uint256 totalAmountOut) {
+        IERC20 TI = IERC20(tokenIn);
+        IERC20 TO = IERC20(tokenOut);
 
-        require(
-            TI.transferFrom(msg.sender, address(this), totalAmountIn),
-            "ERR_TRANSFER_FAILED"
-        );
+        transferFromAllTo(TI, totalAmountIn, address(this));
 
         for (uint256 i = 0; i < swaps.length; i++) {
             Swap memory swap = swaps[i];
-
             IXPool pool = IXPool(swap.pool);
+
             if (TI.allowance(address(this), swap.pool) < totalAmountIn) {
-                TI.approve(swap.pool, uint256(-1));
+                TI.safeApprove(swap.pool, uint256(-1));
             }
 
             (uint256 tokenAmountOut, ) =
-                pool.swapExactAmountIn(
+                pool.swapExactAmountInRefer(
                     tokenIn,
                     swap.tokenInParam,
                     tokenOut,
@@ -93,21 +109,13 @@ contract XSwapProxyV1 {
                     swap.maxPrice,
                     referrer
                 );
-            totalAmountOut = add(tokenAmountOut, totalAmountOut);
+            totalAmountOut = tokenAmountOut.add(totalAmountOut);
         }
 
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
 
-        uint256 t0Balance = TO.balanceOf(address(this));
-        if (t0Balance > 0) {
-            require(TO.transfer(msg.sender, t0Balance), "ERR_TRANSFER_FAILED");
-        }
-
-        uint256 t1Balance = TI.balanceOf(address(this));
-        if (t1Balance > 0) {
-            require(TI.transfer(msg.sender, t1Balance), "ERR_TRANSFER_FAILED");
-        }
-
+        transferAll(TO, totalAmountOut);
+        transferAll(TI, getBalance(tokenIn));
         return totalAmountOut;
     }
 
@@ -115,26 +123,40 @@ contract XSwapProxyV1 {
         Swap[] memory swaps,
         address tokenIn,
         address tokenOut,
+        uint256 maxTotalAmountIn
+    ) public payable returns (uint256 totalAmountIn) {
+        return
+            batchSwapExactOutRefer(
+                swaps,
+                tokenIn,
+                tokenOut,
+                maxTotalAmountIn,
+                address(0x0)
+            );
+    }
+
+    function batchSwapExactOutRefer(
+        Swap[] memory swaps,
+        address tokenIn,
+        address tokenOut,
         uint256 maxTotalAmountIn,
         address referrer
-    ) public _logs_ _lock_ returns (uint256 totalAmountIn) {
-        TokenInterface TI = TokenInterface(tokenIn);
-        TokenInterface TO = TokenInterface(tokenOut);
+    ) public payable returns (uint256 totalAmountIn) {
+        IERC20 TI = IERC20(tokenIn);
+        IERC20 TO = IERC20(tokenOut);
 
-        require(
-            TI.transferFrom(msg.sender, address(this), maxTotalAmountIn),
-            "ERR_TRANSFER_FAILED"
-        );
+        transferFromAllTo(TI, maxTotalAmountIn, address(this));
 
         for (uint256 i = 0; i < swaps.length; i++) {
             Swap memory swap = swaps[i];
             IXPool pool = IXPool(swap.pool);
 
             if (TI.allowance(address(this), swap.pool) < maxTotalAmountIn) {
-                TI.approve(swap.pool, uint256(-1));
+                TI.safeApprove(swap.pool, uint256(-1));
             }
+
             (uint256 tokenAmountIn, ) =
-                pool.swapExactAmountOut(
+                pool.swapExactAmountOutRefer(
                     tokenIn,
                     swap.tokenInParam,
                     tokenOut,
@@ -142,190 +164,212 @@ contract XSwapProxyV1 {
                     swap.maxPrice,
                     referrer
                 );
-            totalAmountIn = add(tokenAmountIn, totalAmountIn);
+            totalAmountIn = tokenAmountIn.add(totalAmountIn);
         }
         require(totalAmountIn <= maxTotalAmountIn, "ERR_LIMIT_IN");
 
-        uint256 t0Balance = TO.balanceOf(address(this));
-        if (t0Balance > 0) {
-            require(TO.transfer(msg.sender, t0Balance), "ERR_TRANSFER_FAILED");
-        }
-
-        uint256 t1Balance = TI.balanceOf(address(this));
-        if (t1Balance > 0) {
-            require(TI.transfer(msg.sender, t1Balance), "ERR_TRANSFER_FAILED");
-        }
-
-        return totalAmountIn;
+        transferAll(TO, getBalance(tokenOut));
+        transferAll(TI, getBalance(tokenIn));
     }
 
-    function batchEthInSwapExactIn(
-        Swap[] memory swaps,
-        address tokenOut,
-        uint256 minTotalAmountOut,
-        address referrer
-    ) public payable _logs_ _lock_ returns (uint256 totalAmountOut) {
-        TokenInterface TO = TokenInterface(tokenOut);
-        weth.deposit.value(msg.value)();
-        for (uint256 i = 0; i < swaps.length; i++) {
-            Swap memory swap = swaps[i];
-            IXPool pool = IXPool(swap.pool);
-            if (weth.allowance(address(this), swap.pool) < msg.value) {
-                weth.approve(swap.pool, uint256(-1));
+    // Pool Management
+
+    // key: keccak256(tokens[i], norms[i]), value: bool
+    mapping(bytes32 => bool) internal _pools;
+
+    function create(
+        IXFactory factory,
+        address[] calldata tokens,
+        uint256[] calldata balances,
+        uint256[] calldata denorms,
+        uint256 swapFee
+    ) external payable returns (IXPool pool) {
+        require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
+        require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
+        require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
+
+        // check pool exist
+        (bool exist, bytes32 sig) = hasPool(tokens, denorms);
+        require(!exist, "ERR_POOL_EXISTS");
+
+        // create new pool
+        pool = factory.newXPool();
+        bool hasETH = false;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (
+                transferFromAllTo(IERC20(tokens[i]), balances[i], address(pool))
+            ) {
+                hasETH = true;
+                pool.bind(address(weth), denorms[i]);
+            } else {
+                pool.bind(tokens[i], denorms[i]);
             }
-            (uint256 tokenAmountOut, ) =
-                pool.swapExactAmountIn(
-                    address(weth),
-                    swap.tokenInParam,
-                    tokenOut,
-                    swap.tokenOutParam,
-                    swap.maxPrice,
-                    referrer
-                );
-            totalAmountOut = add(tokenAmountOut, totalAmountOut);
         }
-        require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
+        require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
+        pool.finalize(swapFee);
 
-        uint256 t0Balance = TO.balanceOf(address(this));
-        if (t0Balance > 0) {
-            require(TO.transfer(msg.sender, t0Balance), "ERR_TRANSFER_FAILED");
-        }
-
-        uint256 wethBalance = weth.balanceOf(address(this));
-        if (wethBalance > 0) {
-            weth.withdraw(wethBalance);
-            (bool xfer, ) = msg.sender.call.value(wethBalance)("");
-            require(xfer, "ERR_ETH_FAILED");
-        }
-        return totalAmountOut;
+        _pools[sig] = true;
+        pool.transfer(msg.sender, pool.balanceOf(address(this)));
     }
 
-    function batchEthOutSwapExactIn(
-        Swap[] memory swaps,
+    //check pool exist
+    function hasPool(address[] memory tokens, uint256[] memory denorms)
+        public
+        view
+        returns (bool exist, bytes32 sig)
+    {
+        require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
+        require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
+
+        uint256 totalWeight = 0;
+        for (uint8 i = 0; i < tokens.length; i++) {
+            totalWeight = totalWeight.add(denorms[i]);
+        }
+
+        bytes memory poolInfo;
+        for (uint8 i = 0; i < tokens.length; i++) {
+            if (i > 0) {
+                require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
+            }
+            //normalized weight (multiplied by 100)
+            uint256 nWeight = denorms[i].mul(100).div(totalWeight);
+            poolInfo = abi.encodePacked(poolInfo, tokens[i], nWeight);
+        }
+        sig = keccak256(poolInfo);
+        exist = _pools[sig];
+    }
+
+    function joinPool(
+        IXPool pool,
+        uint256 poolAmountOut,
+        uint256[] calldata maxAmountsIn
+    ) external payable {
+        address[] memory tokens = pool.getFinalTokens();
+        require(maxAmountsIn.length == tokens.length, "ERR_LENGTH_MISMATCH");
+
+        bool hasEth = false;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (msg.value > 0 && tokens[i] == address(weth)) {
+                transferFromAllAndApprove(
+                    xconfig.ethAddress(),
+                    maxAmountsIn[i],
+                    address(pool)
+                );
+                hasEth = true;
+            } else {
+                transferFromAllAndApprove(
+                    tokens[i],
+                    maxAmountsIn[i],
+                    address(pool)
+                );
+            }
+        }
+        require(msg.value == 0 || hasEth, "ERR_INVALID_PAY");
+        pool.joinPool(poolAmountOut, maxAmountsIn);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (hasEth && tokens[i] == address(weth)) {
+                transferAll(
+                    IERC20(xconfig.ethAddress()),
+                    getBalance(xconfig.ethAddress())
+                );
+            } else {
+                transferAll(IERC20(tokens[i]), getBalance(tokens[i]));
+            }
+        }
+        pool.transfer(msg.sender, pool.balanceOf(address(this)));
+    }
+
+    function joinswapExternAmountIn(
+        IXPool pool,
         address tokenIn,
-        uint256 totalAmountIn,
-        uint256 minTotalAmountOut,
-        address referrer
-    ) public _logs_ _lock_ returns (uint256 totalAmountOut) {
-        TokenInterface TI = TokenInterface(tokenIn);
-        require(
-            TI.transferFrom(msg.sender, address(this), totalAmountIn),
-            "ERR_TRANSFER_FAILED"
-        );
-        for (uint256 i = 0; i < swaps.length; i++) {
-            Swap memory swap = swaps[i];
-            IXPool pool = IXPool(swap.pool);
-            if (TI.allowance(address(this), swap.pool) < totalAmountIn) {
-                TI.approve(swap.pool, uint256(-1));
-            }
-            (uint256 tokenAmountOut, ) =
-                pool.swapExactAmountIn(
-                    tokenIn,
-                    swap.tokenInParam,
+        uint256 tokenAmountIn,
+        uint256 minPoolAmountOut
+    ) external payable {
+        bool hasEth = false;
+        if (transferFromAllAndApprove(tokenIn, tokenAmountIn, address(pool))) {
+            hasEth = true;
+        }
+        require(msg.value == 0 || hasEth, "ERR_INVALID_PAY");
+
+        if (hasEth) {
+            uint256 poolAmountOut =
+                pool.joinswapExternAmountIn(
                     address(weth),
-                    swap.tokenOutParam,
-                    swap.maxPrice,
-                    referrer
+                    tokenAmountIn,
+                    minPoolAmountOut
                 );
-
-            totalAmountOut = add(tokenAmountOut, totalAmountOut);
+            pool.transfer(msg.sender, poolAmountOut);
+        } else {
+            uint256 poolAmountOut =
+                pool.joinswapExternAmountIn(
+                    tokenIn,
+                    tokenAmountIn,
+                    minPoolAmountOut
+                );
+            pool.transfer(msg.sender, poolAmountOut);
         }
-        require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
-        uint256 wethBalance = weth.balanceOf(address(this));
-        weth.withdraw(wethBalance);
-        (bool xfer, ) = msg.sender.call.value(wethBalance)("");
-        require(xfer, "ERR_ETH_FAILED");
-
-        uint256 t1Balance = TI.balanceOf(address(this));
-        if (t1Balance > 0) {
-            require(TI.transfer(msg.sender, t1Balance), "ERR_TRANSFER_FAILED");
-        }
-
-        return totalAmountOut;
     }
 
-    function batchEthInSwapExactOut(
-        Swap[] memory swaps,
-        address tokenOut,
-        address referrer
-    ) public payable _logs_ _lock_ returns (uint256 totalAmountIn) {
-        TokenInterface TO = TokenInterface(tokenOut);
-        weth.deposit.value(msg.value)();
-        for (uint256 i = 0; i < swaps.length; i++) {
-            Swap memory swap = swaps[i];
-            IXPool pool = IXPool(swap.pool);
-            if (weth.allowance(address(this), swap.pool) < msg.value) {
-                weth.approve(swap.pool, uint256(-1));
-            }
-            (uint256 tokenAmountIn, ) =
-                pool.swapExactAmountOut(
-                    address(weth),
-                    swap.tokenInParam,
-                    tokenOut,
-                    swap.tokenOutParam,
-                    swap.maxPrice,
-                    referrer
-                );
-
-            totalAmountIn = add(tokenAmountIn, totalAmountIn);
+    // Internal
+    function getBalance(address token) internal view returns (uint256) {
+        if (token == xconfig.ethAddress()) {
+            return weth.balanceOf(address(this));
         }
+        return IERC20(token).balanceOf(address(this));
+    }
 
-        uint256 t0Balance = TO.balanceOf(address(this));
-        if (t0Balance > 0) {
-            require(TO.transfer(msg.sender, t0Balance), "ERR_TRANSFER_FAILED");
+    function transferAll(IERC20 token, uint256 amount) internal returns (bool) {
+        if (amount == 0) {
+            return true;
         }
-
-        uint256 wethBalance = weth.balanceOf(address(this));
-        if (wethBalance > 0) {
-            weth.withdraw(wethBalance);
-            (bool xfer, ) = msg.sender.call.value(wethBalance)("");
+        if (address(token) == xconfig.ethAddress()) {
+            weth.withdraw(amount);
+            (bool xfer, ) = msg.sender.call.value(amount)("");
             require(xfer, "ERR_ETH_FAILED");
+        } else {
+            token.safeTransfer(msg.sender, amount);
         }
-        return totalAmountIn;
+        return true;
     }
 
-    function batchEthOutSwapExactOut(
-        Swap[] memory swaps,
-        address tokenIn,
-        uint256 maxTotalAmountIn,
-        address referrer
-    ) public _logs_ _lock_ returns (uint256 totalAmountIn) {
-        TokenInterface TI = TokenInterface(tokenIn);
-        require(
-            TI.transferFrom(msg.sender, address(this), maxTotalAmountIn),
-            "ERR_TRANSFER_FAILED"
-        );
-        for (uint256 i = 0; i < swaps.length; i++) {
-            Swap memory swap = swaps[i];
-            IXPool pool = IXPool(swap.pool);
-            if (TI.allowance(address(this), swap.pool) < maxTotalAmountIn) {
-                TI.approve(swap.pool, uint256(-1));
+    function transferFromAllTo(
+        IERC20 token,
+        uint256 amount,
+        address to
+    ) internal returns (bool hasETH) {
+        hasETH = false;
+        if (address(token) == xconfig.ethAddress()) {
+            require(amount == msg.value, "ERR_TOKEN_AMOUNT");
+            weth.deposit.value(amount)();
+            weth.transfer(to, amount);
+            hasETH = true;
+        } else {
+            token.safeTransferFrom(msg.sender, to, amount);
+        }
+    }
+
+    function transferFromAllAndApprove(
+        address token,
+        uint256 amount,
+        address spender
+    ) internal returns (bool hasETH) {
+        hasETH = false;
+        if (token == xconfig.ethAddress()) {
+            require(amount == msg.value, "ERR_TOKEN_AMOUNT");
+            weth.deposit.value(amount)();
+            if (weth.allowance(address(this), spender) > 0) {
+                IERC20(address(weth)).safeApprove(address(spender), 0);
             }
-            (uint256 tokenAmountIn, ) =
-                pool.swapExactAmountOut(
-                    tokenIn,
-                    swap.tokenInParam,
-                    address(weth),
-                    swap.tokenOutParam,
-                    swap.maxPrice,
-                    referrer
-                );
-
-            totalAmountIn = add(tokenAmountIn, totalAmountIn);
+            IERC20(address(weth)).safeApprove(spender, amount);
+            hasETH = true;
+        } else {
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            if (IERC20(token).allowance(address(this), spender) > 0) {
+                IERC20(token).safeApprove(spender, 0);
+            }
+            IERC20(token).safeApprove(spender, amount);
         }
-        require(totalAmountIn <= maxTotalAmountIn, "ERR_LIMIT_IN");
-
-        uint256 t1Balance = TI.balanceOf(address(this));
-        if (t1Balance > 0) {
-            require(TI.transfer(msg.sender, t1Balance), "ERR_TRANSFER_FAILED");
-        }
-
-        uint256 wethBalance = weth.balanceOf(address(this));
-        weth.withdraw(wethBalance);
-        (bool xfer, ) = msg.sender.call.value(wethBalance)("");
-        require(xfer, "ERR_ETH_FAILED");
-        return totalAmountIn;
     }
-
-    function() external payable {}
 }
