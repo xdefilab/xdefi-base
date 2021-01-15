@@ -75,6 +75,24 @@ interface IXPool {
 
     function getVersion() external view returns (bytes32);
 
+    function calcInGivenOut(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountOut,
+        uint256 _swapFee
+    ) external pure returns (uint256 tokenAmountIn);
+
+    function calcOutGivenIn(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountIn,
+        uint256 _swapFee
+    ) external pure returns (uint256 tokenAmountOut);
+
     // Pool Managment
     function setController(address controller) external;
 

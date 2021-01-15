@@ -371,7 +371,7 @@ contract XPool is XApollo, XPToken, XConst {
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
 
-        tokenAmountOut = XMath.calcOutGivenIn(
+        tokenAmountOut = calcOutGivenIn(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -479,7 +479,7 @@ contract XPool is XApollo, XPToken, XConst {
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
 
-        tokenAmountIn = XMath.calcInGivenOut(
+        tokenAmountIn = calcInGivenOut(
             inRecord.balance,
             inRecord.denorm,
             outRecord.balance,
@@ -629,6 +629,44 @@ contract XPool is XApollo, XPToken, XConst {
         _pushUnderlying(tokenOut, xconfig.getSAFU(), _swapFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return tokenAmountOut;
+    }
+
+    function calcOutGivenIn(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountIn,
+        uint256 _swapFee
+    ) public pure returns (uint256) {
+        return
+            XMath.calcOutGivenIn(
+                tokenBalanceIn,
+                tokenWeightIn,
+                tokenBalanceOut,
+                tokenWeightOut,
+                tokenAmountIn,
+                _swapFee
+            );
+    }
+
+    function calcInGivenOut(
+        uint256 tokenBalanceIn,
+        uint256 tokenWeightIn,
+        uint256 tokenBalanceOut,
+        uint256 tokenWeightOut,
+        uint256 tokenAmountOut,
+        uint256 _swapFee
+    ) public pure returns (uint256) {
+        return
+            XMath.calcInGivenOut(
+                tokenBalanceIn,
+                tokenWeightIn,
+                tokenBalanceOut,
+                tokenWeightOut,
+                tokenAmountOut,
+                _swapFee
+            );
     }
 
     // ==
