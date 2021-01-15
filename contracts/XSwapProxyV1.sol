@@ -1,9 +1,10 @@
 pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./interface/IXPool.sol";
 import "./interface/IXFactory.sol";
 import "./interface/IXConfig.sol";
@@ -32,7 +33,7 @@ interface IWETH {
     function withdraw(uint256 amount) external;
 }
 
-contract XSwapProxyV1 {
+contract XSwapProxyV1 is ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -67,7 +68,7 @@ contract XSwapProxyV1 {
         address tokenOut,
         uint256 totalAmountIn,
         uint256 minTotalAmountOut
-    ) public payable returns (uint256 totalAmountOut) {
+    ) public payable nonReentrant returns (uint256 totalAmountOut) {
         return
             batchSwapExactInRefer(
                 swaps,
@@ -86,7 +87,7 @@ contract XSwapProxyV1 {
         uint256 totalAmountIn,
         uint256 minTotalAmountOut,
         address referrer
-    ) public payable returns (uint256 totalAmountOut) {
+    ) public payable nonReentrant returns (uint256 totalAmountOut) {
         IERC20 TI = IERC20(tokenIn);
         IERC20 TO = IERC20(tokenOut);
 
@@ -124,7 +125,7 @@ contract XSwapProxyV1 {
         address tokenIn,
         address tokenOut,
         uint256 maxTotalAmountIn
-    ) public payable returns (uint256 totalAmountIn) {
+    ) public payable nonReentrant returns (uint256 totalAmountIn) {
         return
             batchSwapExactOutRefer(
                 swaps,
@@ -141,7 +142,7 @@ contract XSwapProxyV1 {
         address tokenOut,
         uint256 maxTotalAmountIn,
         address referrer
-    ) public payable returns (uint256 totalAmountIn) {
+    ) public payable nonReentrant returns (uint256 totalAmountIn) {
         IERC20 TI = IERC20(tokenIn);
         IERC20 TO = IERC20(tokenOut);
 
@@ -183,7 +184,7 @@ contract XSwapProxyV1 {
         uint256[] calldata balances,
         uint256[] calldata denorms,
         uint256 swapFee
-    ) external payable returns (IXPool pool) {
+    ) external payable nonReentrant returns (IXPool pool) {
         require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
@@ -245,7 +246,7 @@ contract XSwapProxyV1 {
         IXPool pool,
         uint256 poolAmountOut,
         uint256[] calldata maxAmountsIn
-    ) external payable {
+    ) external payable nonReentrant {
         address[] memory tokens = pool.getFinalTokens();
         require(maxAmountsIn.length == tokens.length, "ERR_LENGTH_MISMATCH");
 
@@ -286,7 +287,7 @@ contract XSwapProxyV1 {
         address tokenIn,
         uint256 tokenAmountIn,
         uint256 minPoolAmountOut
-    ) external payable {
+    ) external payable nonReentrant {
         bool hasEth = false;
         if (transferFromAllAndApprove(tokenIn, tokenAmountIn, address(pool))) {
             hasEth = true;

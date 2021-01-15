@@ -12,4 +12,6 @@ interface IXConfig {
     function getSafuFee() external view returns (uint256);
 
     function ethAddress() external pure returns (address);
+
+    function XDEXAddress() external pure returns (address);
 }

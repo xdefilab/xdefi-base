@@ -10,12 +10,12 @@ import "./interface/IXConfig.sol";
 contract XPool is XApollo, XPToken, XConst {
     using XNum for uint256;
 
-    //Swap Fees: 0.1%, 0.3%, 1%, 3%, 10%
+    //Swap Fees: 0.1%, 0.25%, 1%, 2.5%, 10%
     uint256[5] public SWAP_FEES = [
         BONE / 1000,
-        (3 * BONE) / 1000,
+        (25 * BONE) / 10000,
         BONE / 100,
-        (3 * BONE) / 100,
+        (25 * BONE) / 1000,
         BONE / 10
     ];
 
