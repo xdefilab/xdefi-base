@@ -2,7 +2,6 @@ pragma solidity 0.5.17;
 
 import "./XVersion.sol";
 import "./lib/XNum.sol";
-//import "./interface/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // Highly opinionated token implementation

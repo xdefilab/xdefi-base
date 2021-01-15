@@ -2,7 +2,18 @@
     "contractName": "XPool",
     "abi": [
         {
-            "inputs": [],
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_xconfig",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_controller",
+                    "type": "address"
+                }
+            ],
             "payable": false,
             "stateMutability": "nonpayable",
             "type": "constructor"
@@ -13,19 +24,19 @@
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "src",
+                    "name": "owner",
                     "type": "address"
                 },
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "dst",
+                    "name": "spender",
                     "type": "address"
                 },
                 {
                     "indexed": false,
                     "internalType": "uint256",
-                    "name": "amt",
+                    "name": "value",
                     "type": "uint256"
                 }
             ],
@@ -181,19 +192,19 @@
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "src",
+                    "name": "from",
                     "type": "address"
                 },
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "dst",
+                    "name": "to",
                     "type": "address"
                 },
                 {
                     "indexed": false,
                     "internalType": "uint256",
-                    "name": "amt",
+                    "name": "value",
                     "type": "uint256"
                 }
             ],
@@ -204,6 +215,21 @@
             "constant": true,
             "inputs": [],
             "name": "BONE",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "EXIT_ZERO_FEE",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -234,21 +260,6 @@
             "constant": true,
             "inputs": [],
             "name": "MAX_BOUND_TOKENS",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "MAX_FEE",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -353,37 +364,7 @@
         {
             "constant": true,
             "inputs": [],
-            "name": "MIN_FEE",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
             "name": "MIN_WEIGHT",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "SAFU_FEE",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -419,42 +400,12 @@
         {
             "constant": true,
             "inputs": [],
-            "name": "_controller",
+            "name": "_exitFee",
             "outputs": [
                 {
-                    "internalType": "address",
+                    "internalType": "uint256",
                     "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "_farmXDEXCreator",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "_finalized",
-            "outputs": [
-                {
-                    "internalType": "bool",
-                    "name": "",
-                    "type": "bool"
+                    "type": "uint256"
                 }
             ],
             "payable": false,
@@ -470,51 +421,6 @@
                     "internalType": "address",
                     "name": "",
                     "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "_publicSwap",
-            "outputs": [
-                {
-                    "internalType": "bool",
-                    "name": "",
-                    "type": "bool"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "_safu",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "_swapFee",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
                 }
             ],
             "payable": false,
@@ -595,28 +501,18 @@
             "type": "function"
         },
         {
-            "constant": false,
-            "inputs": [
+            "constant": true,
+            "inputs": [],
+            "name": "controller",
+            "outputs": [
                 {
                     "internalType": "address",
-                    "name": "token",
+                    "name": "",
                     "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "balance",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "denorm",
-                    "type": "uint256"
                 }
             ],
-            "name": "bind",
-            "outputs": [],
             "payable": false,
-            "stateMutability": "nonpayable",
+            "stateMutability": "view",
             "type": "function"
         },
         {
@@ -635,265 +531,14 @@
             "type": "function"
         },
         {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "poolAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256[]",
-                    "name": "minAmountsOut",
-                    "type": "uint256[]"
-                }
-            ],
-            "name": "exitPool",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenOut",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountOut",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "maxPoolAmountIn",
-                    "type": "uint256"
-                }
-            ],
-            "name": "exitswapExternAmountOut",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "poolAmountIn",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenOut",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "poolAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "minAmountOut",
-                    "type": "uint256"
-                }
-            ],
-            "name": "exitswapPoolAmountIn",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountOut",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [],
-            "name": "finalize",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "token",
-                    "type": "address"
-                }
-            ],
-            "name": "getBalance",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
             "constant": true,
             "inputs": [],
-            "name": "getCurrentTokens",
+            "name": "finalized",
             "outputs": [
                 {
-                    "internalType": "address[]",
-                    "name": "tokens",
-                    "type": "address[]"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "token",
-                    "type": "address"
-                }
-            ],
-            "name": "getDenormalizedWeight",
-            "outputs": [
-                {
-                    "internalType": "uint256",
+                    "internalType": "bool",
                     "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "getFinalTokens",
-            "outputs": [
-                {
-                    "internalType": "address[]",
-                    "name": "tokens",
-                    "type": "address[]"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "token",
-                    "type": "address"
-                }
-            ],
-            "name": "getNormalizedWeight",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "getNumTokens",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "address",
-                    "name": "tokenOut",
-                    "type": "address"
-                }
-            ],
-            "name": "getSpotPrice",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "spotPrice",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "address",
-                    "name": "tokenOut",
-                    "type": "address"
-                }
-            ],
-            "name": "getSpotPriceSansFee",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "spotPrice",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "getTotalDenormalizedWeight",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
+                    "type": "bool"
                 }
             ],
             "payable": false,
@@ -916,124 +561,6 @@
             "type": "function"
         },
         {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "token",
-                    "type": "address"
-                }
-            ],
-            "name": "gulp",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "t",
-                    "type": "address"
-                }
-            ],
-            "name": "isBound",
-            "outputs": [
-                {
-                    "internalType": "bool",
-                    "name": "",
-                    "type": "bool"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "poolAmountOut",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256[]",
-                    "name": "maxAmountsIn",
-                    "type": "uint256[]"
-                }
-            ],
-            "name": "joinPool",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "minPoolAmountOut",
-                    "type": "uint256"
-                }
-            ],
-            "name": "joinswapExternAmountIn",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "poolAmountOut",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "poolAmountOut",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "maxAmountIn",
-                    "type": "uint256"
-                }
-            ],
-            "name": "joinswapPoolAmountOut",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountIn",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
             "constant": true,
             "inputs": [],
             "name": "name",
@@ -1049,175 +576,18 @@
             "type": "function"
         },
         {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "token",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "balance",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "denorm",
-                    "type": "uint256"
-                }
-            ],
-            "name": "rebind",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "manager",
-                    "type": "address"
-                }
-            ],
-            "name": "setController",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "bool",
-                    "name": "public_",
-                    "type": "bool"
-                }
-            ],
-            "name": "setPublicSwap",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "swapFee",
-                    "type": "uint256"
-                }
-            ],
-            "name": "setSwapFee",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "address",
-                    "name": "tokenOut",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "minAmountOut",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "maxPrice",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "address",
-                    "name": "referrer",
-                    "type": "address"
-                }
-            ],
-            "name": "swapExactAmountIn",
+            "constant": true,
+            "inputs": [],
+            "name": "swapFee",
             "outputs": [
                 {
                     "internalType": "uint256",
-                    "name": "tokenAmountOut",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "spotPriceAfter",
+                    "name": "",
                     "type": "uint256"
                 }
             ],
             "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "maxAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "address",
-                    "name": "tokenOut",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountOut",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "maxPrice",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "address",
-                    "name": "referrer",
-                    "type": "address"
-                }
-            ],
-            "name": "swapExactAmountOut",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "spotPriceAfter",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "nonpayable",
+            "stateMutability": "view",
             "type": "function"
         },
         {
@@ -1308,6 +678,215 @@
             "type": "function"
         },
         {
+            "constant": true,
+            "inputs": [],
+            "name": "xconfig",
+            "outputs": [
+                {
+                    "internalType": "contract IXConfig",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "t",
+                    "type": "address"
+                }
+            ],
+            "name": "isBound",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "getNumTokens",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "getFinalTokens",
+            "outputs": [
+                {
+                    "internalType": "address[]",
+                    "name": "tokens",
+                    "type": "address[]"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                }
+            ],
+            "name": "getDenormalizedWeight",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "getTotalDenormalizedWeight",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                }
+            ],
+            "name": "getNormalizedWeight",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                }
+            ],
+            "name": "getBalance",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "manager",
+                    "type": "address"
+                }
+            ],
+            "name": "setController",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "newFee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "setExitFee",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "denorm",
+                    "type": "uint256"
+                }
+            ],
+            "name": "bind",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "_swapFee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "finalize",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
             "constant": false,
             "inputs": [
                 {
@@ -1316,10 +895,450 @@
                     "type": "address"
                 }
             ],
-            "name": "unbind",
+            "name": "gulp",
             "outputs": [],
             "payable": false,
             "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                }
+            ],
+            "name": "getSpotPrice",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "spotPrice",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                }
+            ],
+            "name": "getSpotPriceSansFee",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "spotPrice",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "poolAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "maxAmountsIn",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "joinPool",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "poolAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "minAmountsOut",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "exitPool",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxPrice",
+                    "type": "uint256"
+                }
+            ],
+            "name": "swapExactAmountIn",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "spotPriceAfter",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxPrice",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "referrer",
+                    "type": "address"
+                }
+            ],
+            "name": "swapExactAmountInRefer",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "spotPriceAfter",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxPrice",
+                    "type": "uint256"
+                }
+            ],
+            "name": "swapExactAmountOut",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "spotPriceAfter",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxPrice",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "referrer",
+                    "type": "address"
+                }
+            ],
+            "name": "swapExactAmountOutRefer",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "spotPriceAfter",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minPoolAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "name": "joinswapExternAmountIn",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "poolAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "poolAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "name": "exitswapPoolAmountIn",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenBalanceIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenWeightIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenBalanceOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenWeightOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_swapFee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "calcOutGivenIn",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "pure",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "tokenBalanceIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenWeightIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenBalanceOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenWeightOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_swapFee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "calcInGivenOut",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "pure",
             "type": "function"
         }
     ]

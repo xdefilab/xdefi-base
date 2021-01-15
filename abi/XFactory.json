@@ -2,7 +2,18 @@
     "contractName": "XFactory",
     "abi": [
         {
-            "inputs": [],
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_config",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_creator",
+                    "type": "address"
+                }
+            ],
             "payable": false,
             "stateMutability": "nonpayable",
             "type": "constructor"
@@ -27,61 +38,46 @@
             "type": "event"
         },
         {
-            "constant": false,
-            "inputs": [],
-            "name": "newXPool",
-            "outputs": [
-                {
-                    "internalType": "contract XPool",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
             "anonymous": false,
             "inputs": [
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "core",
+                    "name": "creator",
                     "type": "address"
                 },
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "coreNew",
+                    "name": "creatorNew",
                     "type": "address"
                 }
             ],
-            "name": "SET_CORE",
+            "name": "SET_XPOOL_CREATOR",
             "type": "event"
         },
         {
-            "constant": false,
-            "inputs": [
+            "constant": true,
+            "inputs": [],
+            "name": "getVersion",
+            "outputs": [
                 {
-                    "internalType": "address",
-                    "name": "_core",
-                    "type": "address"
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
                 }
             ],
-            "name": "setCore",
-            "outputs": [],
             "payable": false,
-            "stateMutability": "nonpayable",
+            "stateMutability": "view",
             "type": "function"
         },
         {
             "constant": true,
             "inputs": [],
-            "name": "core",
+            "name": "xconfig",
             "outputs": [
                 {
-                    "internalType": "address",
+                    "internalType": "contract IXConfig",
                     "name": "",
                     "type": "address"
                 }
@@ -93,12 +89,12 @@
         {
             "constant": true,
             "inputs": [],
-            "name": "getVersion",
+            "name": "xcreator",
             "outputs": [
                 {
-                    "internalType": "bytes32",
+                    "internalType": "contract IXPoolCreator",
                     "name": "",
-                    "type": "bytes32"
+                    "type": "address"
                 }
             ],
             "payable": false,
@@ -124,6 +120,36 @@
             ],
             "payable": false,
             "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [],
+            "name": "newXPool",
+            "outputs": [
+                {
+                    "internalType": "contract XPool",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_creator",
+                    "type": "address"
+                }
+            ],
+            "name": "setPoolCreator",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
             "type": "function"
         }
     ]

@@ -1,0 +1,466 @@
+{
+    "contractName": "XSwapProxyV1",
+    "abi": [
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_weth",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_xconfig",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+        },
+        {
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "fallback"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "BONE",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "MAX_BOUND_TOKENS",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "MIN_BOUND_TOKENS",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "xconfig",
+            "outputs": [
+                {
+                    "internalType": "contract IXConfig",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "address",
+                            "name": "pool",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenInParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenOutParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "maxPrice",
+                            "type": "uint256"
+                        }
+                    ],
+                    "internalType": "struct XSwapProxyV1.Swap[]",
+                    "name": "swaps",
+                    "type": "tuple[]"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "totalAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minTotalAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "name": "batchSwapExactIn",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "totalAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "address",
+                            "name": "pool",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenInParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenOutParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "maxPrice",
+                            "type": "uint256"
+                        }
+                    ],
+                    "internalType": "struct XSwapProxyV1.Swap[]",
+                    "name": "swaps",
+                    "type": "tuple[]"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "totalAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minTotalAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "referrer",
+                    "type": "address"
+                }
+            ],
+            "name": "batchSwapExactInRefer",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "totalAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "address",
+                            "name": "pool",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenInParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenOutParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "maxPrice",
+                            "type": "uint256"
+                        }
+                    ],
+                    "internalType": "struct XSwapProxyV1.Swap[]",
+                    "name": "swaps",
+                    "type": "tuple[]"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxTotalAmountIn",
+                    "type": "uint256"
+                }
+            ],
+            "name": "batchSwapExactOut",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "totalAmountIn",
+                    "type": "uint256"
+                }
+            ],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "components": [
+                        {
+                            "internalType": "address",
+                            "name": "pool",
+                            "type": "address"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenInParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "tokenOutParam",
+                            "type": "uint256"
+                        },
+                        {
+                            "internalType": "uint256",
+                            "name": "maxPrice",
+                            "type": "uint256"
+                        }
+                    ],
+                    "internalType": "struct XSwapProxyV1.Swap[]",
+                    "name": "swaps",
+                    "type": "tuple[]"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenOut",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "maxTotalAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "referrer",
+                    "type": "address"
+                }
+            ],
+            "name": "batchSwapExactOutRefer",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "totalAmountIn",
+                    "type": "uint256"
+                }
+            ],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "contract IXFactory",
+                    "name": "factory",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "tokens",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "balances",
+                    "type": "uint256[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "denorms",
+                    "type": "uint256[]"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "swapFee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "create",
+            "outputs": [
+                {
+                    "internalType": "contract IXPool",
+                    "name": "pool",
+                    "type": "address"
+                }
+            ],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {
+                    "internalType": "address[]",
+                    "name": "tokens",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "denorms",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "hasPool",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "exist",
+                    "type": "bool"
+                },
+                {
+                    "internalType": "bytes32",
+                    "name": "sig",
+                    "type": "bytes32"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "contract IXPool",
+                    "name": "pool",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "poolAmountOut",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "maxAmountsIn",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "joinPool",
+            "outputs": [],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "contract IXPool",
+                    "name": "pool",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "tokenIn",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "tokenAmountIn",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "minPoolAmountOut",
+                    "type": "uint256"
+                }
+            ],
+            "name": "joinswapExternAmountIn",
+            "outputs": [],
+            "payable": true,
+            "stateMutability": "payable",
+            "type": "function"
+        }
+    ]
+}

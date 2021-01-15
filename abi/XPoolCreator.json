@@ -1,0 +1,46 @@
+{
+    "contractName": "XPoolCreator",
+    "abi": [
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "getVersion",
+            "outputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "config",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "controller",
+                    "type": "address"
+                }
+            ],
+            "name": "newXPool",
+            "outputs": [
+                {
+                    "internalType": "contract XPool",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ]
+}

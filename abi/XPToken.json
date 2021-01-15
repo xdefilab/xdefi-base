@@ -7,19 +7,19 @@
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "src",
+                    "name": "owner",
                     "type": "address"
                 },
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "dst",
+                    "name": "spender",
                     "type": "address"
                 },
                 {
                     "indexed": false,
                     "internalType": "uint256",
-                    "name": "amt",
+                    "name": "value",
                     "type": "uint256"
                 }
             ],
@@ -32,19 +32,19 @@
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "src",
+                    "name": "from",
                     "type": "address"
                 },
                 {
                     "indexed": true,
                     "internalType": "address",
-                    "name": "dst",
+                    "name": "to",
                     "type": "address"
                 },
                 {
                     "indexed": false,
                     "internalType": "uint256",
-                    "name": "amt",
+                    "name": "value",
                     "type": "uint256"
                 }
             ],
