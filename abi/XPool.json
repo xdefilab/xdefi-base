@@ -44,6 +44,37 @@
             "type": "event"
         },
         {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "caller",
+                    "type": "address"
+                },
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "denorm",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "balance",
+                    "type": "uint256"
+                }
+            ],
+            "name": "LOG_BIND",
+            "type": "event"
+        },
+        {
             "anonymous": true,
             "inputs": [
                 {
@@ -91,6 +122,32 @@
                 }
             ],
             "name": "LOG_EXIT",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "fee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "LOG_EXIT_FEE",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "swapFee",
+                    "type": "uint256"
+                }
+            ],
+            "name": "LOG_FINAL",
             "type": "event"
         },
         {
@@ -399,36 +456,6 @@
         },
         {
             "constant": true,
-            "inputs": [],
-            "name": "_exitFee",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "_origin",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
             "inputs": [
                 {
                     "internalType": "address",
@@ -533,6 +560,21 @@
         {
             "constant": true,
             "inputs": [],
+            "name": "exitFee",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
             "name": "finalized",
             "outputs": [
                 {
@@ -569,6 +611,21 @@
                     "internalType": "string",
                     "name": "",
                     "type": "string"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "origin",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
                 }
             ],
             "payable": false,
@@ -841,7 +898,7 @@
             "inputs": [
                 {
                     "internalType": "uint256",
-                    "name": "newFee",
+                    "name": "fee",
                     "type": "uint256"
                 }
             ],
