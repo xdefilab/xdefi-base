@@ -69,6 +69,12 @@ interface IXPool {
 
     function swapFee() external view returns (uint256);
 
+    function exitFee() external view returns (uint256);
+
+    function finalized() external view returns (uint256);
+
+    function controller() external view returns (uint256);
+
     function getDenormalizedWeight(address) external view returns (uint256);
 
     function getTotalDenormalizedWeight() external view returns (uint256);
@@ -94,7 +100,7 @@ interface IXPool {
     ) external pure returns (uint256 tokenAmountOut);
 
     // Pool Managment
-    function setController(address controller) external;
+    function setController(address _controller) external;
 
     function setExitFee(uint256 newFee) external;
 
