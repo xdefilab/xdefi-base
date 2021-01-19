@@ -368,6 +368,7 @@ contract XPool is XApollo, XPToken, XConst {
     ) public _lock_ returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(finalized, "ERR_NOT_FINALIZED");
 
         Record storage inRecord = _records[address(tokenIn)];
         Record storage outRecord = _records[address(tokenOut)];
@@ -476,6 +477,7 @@ contract XPool is XApollo, XPToken, XConst {
     ) public _lock_ returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(finalized, "ERR_NOT_FINALIZED");
 
         Record storage inRecord = _records[address(tokenIn)];
         Record storage outRecord = _records[address(tokenOut)];

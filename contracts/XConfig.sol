@@ -1,9 +1,12 @@
 pragma solidity 0.5.17;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interface/IXPool.sol";
+import "./XConst.sol";
 
-contract XConfig {
+contract XConfig is XConst {
+    using SafeMath for uint256;
     using Address for address;
 
     address private core;
@@ -20,11 +23,14 @@ contract XConfig {
     // XDEX Farm Pool Creator
     address private farmPoolCreator;
 
+    // Swap Proxy Address
+    address private swapProxy;
     //is farm pool
 
-    //pool sig
+    // sorted pool sigs
+    // key: keccak256(tokens[i], norms[i]), value: pool_exists
+    mapping(bytes32 => bool) internal poolSigs;
 
-    uint256 public constant BONE = 10**18;
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
     event INIT_SAFU(address indexed addr);
@@ -68,6 +74,10 @@ contract XConfig {
         return SAFU_FEE;
     }
 
+    function getSwapProxy() external view returns (address) {
+        return swapProxy;
+    }
+
     /**
      * @dev returns the address used within the protocol to identify ETH
      * @return the address assigned to ETH
@@ -106,6 +116,45 @@ contract XConfig {
         require(_fee <= (BONE / 10), "INVALID_SAFU_FEE");
         emit SET_SAFU_FEE(SAFU_FEE, _fee);
         SAFU_FEE = _fee;
+    }
+
+    function setSwapProxy(address _proxy) external onlyCore {
+        require(_proxy != address(0), "ERR_ZERO_ADDR");
+        swapProxy = _proxy;
+    }
+
+    // to check pool's existence which has the same tokens and weights
+    function hasPool(address[] memory tokens, uint256[] memory denorms)
+        public
+        view
+        returns (bool exist, bytes32 sig)
+    {
+        require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
+        require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
+
+        uint256 totalWeight = 0;
+        for (uint8 i = 0; i < tokens.length; i++) {
+            totalWeight = totalWeight.add(denorms[i]);
+        }
+
+        bytes memory poolInfo;
+        for (uint8 i = 0; i < tokens.length; i++) {
+            if (i > 0) {
+                require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
+            }
+            //normalized weight (multiplied by 100)
+            uint256 nWeight = denorms[i].mul(100).div(totalWeight);
+            poolInfo = abi.encodePacked(poolInfo, tokens[i], nWeight);
+        }
+        sig = keccak256(poolInfo);
+
+        exist = poolSigs[sig];
+    }
+
+    function addPoolSig(bytes32 sig) public {
+        require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
+        //sig != 0
     }
 
     // convert any token in SAFU to XDEX in pool
