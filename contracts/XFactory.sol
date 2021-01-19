@@ -6,7 +6,7 @@ import "./XPool.sol";
 import "./interface/IXConfig.sol";
 
 interface IXPoolCreator {
-    function newXPool(address config, address controller)
+    function newXPool(address config, address controller, uint256 poolExpiryBlockHeight)
         external
         returns (XPool);
 }
@@ -32,8 +32,8 @@ contract XFactory is XApollo {
         return _isPool[b];
     }
 
-    function newXPool() external returns (XPool) {
-        XPool xpool = xcreator.newXPool(address(xconfig), msg.sender);
+    function newXPool(uint256 poolExpiryBlockHeight) external returns (XPool) {
+        XPool xpool = xcreator.newXPool(address(xconfig), msg.sender, poolExpiryBlockHeight);
         _isPool[address(xpool)] = true;
 
         emit LOG_NEW_POOL(msg.sender, address(xpool));

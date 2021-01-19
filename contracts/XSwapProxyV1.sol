@@ -183,7 +183,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address[] calldata tokens,
         uint256[] calldata balances,
         uint256[] calldata denorms,
-        uint256 swapFee
+        uint256 swapFee,
+        uint256 poolExpiryBlockHeight
     ) external payable nonReentrant returns (IXPool pool) {
         require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
@@ -195,7 +196,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(!exist, "ERR_POOL_EXISTS");
 
         // create new pool
-        pool = factory.newXPool();
+        pool = factory.newXPool(poolExpiryBlockHeight);
         bool hasETH = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             if (
