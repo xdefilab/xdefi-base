@@ -75,6 +75,8 @@ interface IXPool {
 
     function controller() external view returns (uint256);
 
+    function xconfig() external view returns (uint256);
+
     function getDenormalizedWeight(address) external view returns (uint256);
 
     function getTotalDenormalizedWeight() external view returns (uint256);
