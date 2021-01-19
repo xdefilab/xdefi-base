@@ -45,17 +45,11 @@ contract XConfig is XConst {
     address private safu;
     uint256 public SAFU_FEE = (5 * BONE) / 10000;
 
-    // XDEX Farm Pool Creator
-    address private farmPoolCreator;
-
     // Swap Proxy Address
     address private swapProxy;
 
     // Check Farm Pool
     mapping(address => bool) internal farmPools;
-    //isFarmPool
-    //addFarmPool
-    //removeFarmPool
 
     // sorted pool sigs
     // key: keccak256(tokens[i], norms[i]), value: pool_exists
@@ -66,11 +60,14 @@ contract XConfig is XConst {
     event INIT_SAFU(address indexed addr);
     event SET_CORE(address indexed core, address indexed coreNew);
     event SET_SAFU(address indexed safu, address indexed safuNew);
-    event SET_FARM_CREATOR(
-        address indexed farmPoolCreator,
-        address indexed creatorNew
-    );
+
     event SET_SAFU_FEE(uint256 indexed fee, uint256 indexed feeNew);
+
+    event ADD_POOL_SIG(address indexed caller, bytes32 sig);
+    event RM_POOL_SIG(address indexed caller, bytes32 sig);
+
+    event ADD_FARM_POOL(address indexed pool);
+    event RM_FARM_POOL(address indexed pool);
 
     modifier onlyCore() {
         require(msg.sender == core, "ERR_CORE_AUTH");
@@ -80,7 +77,6 @@ contract XConfig is XConst {
     constructor() public {
         core = msg.sender;
         safu = address(this);
-        farmPoolCreator = address(0xa1cfB221AC318F751892345D87b9F4E91227Bc1C);
         emit INIT_SAFU(address(this));
     }
 
@@ -90,10 +86,6 @@ contract XConfig is XConst {
 
     function getSAFU() external view returns (address) {
         return safu;
-    }
-
-    function getFarmCreator() external view returns (address) {
-        return farmPoolCreator;
     }
 
     function getMaxExitFee() external view returns (uint256) {
@@ -160,12 +152,6 @@ contract XConfig is XConst {
         safu = _safu;
     }
 
-    function setFarmCreator(address _user) external onlyCore {
-        require(_user != address(0), "ERR_ZERO_ADDR");
-        emit SET_FARM_CREATOR(farmPoolCreator, _user);
-        farmPoolCreator = _user;
-    }
-
     function setMaxExitFee(uint256 _fee) external onlyCore {
         require(_fee <= (BONE / 10), "INVALID_EXIT_FEE");
         maxExitFee = _fee;
@@ -183,10 +169,23 @@ contract XConfig is XConst {
     }
 
     // add pool's sig
+    // only allow called by swapProxy
     function addPoolSig(bytes32 sig) external {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = true;
+
+        emit ADD_POOL_SIG(msg.sender, sig);
+    }
+
+    // remove pool's sig
+    // only allow called by swapProxy
+    function removePoolSig(bytes32 sig) external {
+        require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
+        require(sig != 0, "ERR_NOT_SIG");
+        poolSigs[sig] = false;
+
+        emit RM_POOL_SIG(msg.sender, sig);
     }
 
     function isFarmPool(address pool) external view returns (bool) {
@@ -197,12 +196,16 @@ contract XConfig is XConst {
         require(pool != address(0), "ERR_ZERO_ADDR");
         require(!farmPools[pool], "ERR_IS_FARMPOOL");
         farmPools[pool] = true;
+
+        emit ADD_FARM_POOL(pool);
     }
 
     function removeFarmPool(address pool) external onlyCore {
         require(pool != address(0), "ERR_ZERO_ADDR");
         require(farmPools[pool], "ERR_NOT_FARMPOOL");
         farmPools[pool] = false;
+
+        emit RM_FARM_POOL(pool);
     }
 
     // swap any token in SAFU to XDEX

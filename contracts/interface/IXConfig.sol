@@ -5,7 +5,7 @@ interface IXConfig {
 
     function getSAFU() external view returns (address);
 
-    function getFarmCreator() external view returns (address);
+    function isFarmPool(address pool) external view returns (bool);
 
     function getMaxExitFee() external view returns (uint256);
 
@@ -24,4 +24,7 @@ interface IXConfig {
 
     // add by XSwapProxy
     function addPoolSig(bytes32 sig) external;
+
+    // remove by XSwapProxy
+    function removePoolSig(bytes32 sig) external;
 }
