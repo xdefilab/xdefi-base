@@ -21,4 +21,7 @@ interface IXConfig {
         external
         view
         returns (bool exist, bytes32 sig);
+
+    // add by XSwapProxy
+    function addPoolSig(bytes32 sig) external;
 }

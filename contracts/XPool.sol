@@ -291,6 +291,7 @@ contract XPool is XApollo, XPToken, XConst {
         _lock_
     {
         require(finalized, "ERR_NOT_FINALIZED");
+        require(maxAmountsIn.length == _tokens.length, "ERR_LENGTH_MISMATCH");
 
         uint256 poolTotal = totalSupply();
         uint256 ratio = poolAmountOut.bdiv(poolTotal);
@@ -315,6 +316,7 @@ contract XPool is XApollo, XPToken, XConst {
         _lock_
     {
         require(finalized, "ERR_NOT_FINALIZED");
+        require(minAmountsOut.length == _tokens.length, "ERR_LENGTH_MISMATCH");
 
         uint256 poolTotal = totalSupply();
         uint256 _exitFee = poolAmountIn.bmul(exitFee);
