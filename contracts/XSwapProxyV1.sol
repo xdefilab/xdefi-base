@@ -174,10 +174,6 @@ contract XSwapProxyV1 is ReentrancyGuard {
     }
 
     // Pool Management
-
-    // key: keccak256(tokens[i], norms[i]), value: bool
-    //mapping(bytes32 => bool) internal _pools;
-
     function create(
         IXFactory factory,
         address[] calldata tokens,
@@ -210,37 +206,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
         pool.finalize(swapFee);
 
-        //_pools[sig] = true;
+        xconfig.addPoolSig(sig);
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
     }
-
-    //check pool exist
-    // function hasPool(address[] memory tokens, uint256[] memory denorms)
-    //     public
-    //     view
-    //     returns (bool exist, bytes32 sig)
-    // {
-    //     require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
-    //     require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
-    //     require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
-
-    //     uint256 totalWeight = 0;
-    //     for (uint8 i = 0; i < tokens.length; i++) {
-    //         totalWeight = totalWeight.add(denorms[i]);
-    //     }
-
-    //     bytes memory poolInfo;
-    //     for (uint8 i = 0; i < tokens.length; i++) {
-    //         if (i > 0) {
-    //             require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
-    //         }
-    //         //normalized weight (multiplied by 100)
-    //         uint256 nWeight = denorms[i].mul(100).div(totalWeight);
-    //         poolInfo = abi.encodePacked(poolInfo, tokens[i], nWeight);
-    //     }
-    //     sig = keccak256(poolInfo);
-    //     exist = _pools[sig];
-    // }
 
     function joinPool(
         IXPool pool,
