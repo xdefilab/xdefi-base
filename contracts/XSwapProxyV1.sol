@@ -270,7 +270,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(msg.value == 0 || hasEth, "ERR_INVALID_PAY");
         pool.joinPool(poolAmountOut, maxAmountsIn);
         for (uint256 i = 0; i < tokens.length; i++) {
-            if (hasEth && tokens[i] == address(weth)) {
+            if (hasEth) {
                 transferAll(
                     IERC20(xconfig.ethAddress()),
                     getBalance(xconfig.ethAddress())

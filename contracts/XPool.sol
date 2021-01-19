@@ -53,6 +53,17 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountOut
     );
 
+    event LOG_BIND(
+        address indexed caller,
+        address indexed token,
+        uint256 denorm,
+        uint256 balance
+    );
+
+    event LOG_EXIT_FEE(uint256 fee);
+
+    event LOG_FINAL(uint256 swapFee);
+
     //anonymous event
     event LOG_CALL(
         bytes4 indexed sig,
@@ -84,7 +95,7 @@ contract XPool is XApollo, XPToken, XConst {
 
     // `finalize` require CONTROL, `finalize` sets `can SWAP and can JOIN`
     uint256 public swapFee;
-    uint256 public _exitFee;
+    uint256 public exitFee;
 
     address[] internal _tokens;
     mapping(address => Record) internal _records;
@@ -92,13 +103,13 @@ contract XPool is XApollo, XPToken, XConst {
 
     IXConfig public xconfig;
     // if(tx.origin == FarmPoolCreator) is xdex farm pool
-    address public _origin;
+    address public origin;
 
     constructor(address _xconfig, address _controller) public {
         controller = _controller;
-        _origin = tx.origin;
+        origin = tx.origin;
         swapFee = SWAP_FEES[1]; //default 0.3%
-        _exitFee = EXIT_ZERO_FEE;
+        exitFee = EXIT_ZERO_FEE;
         finalized = false;
         xconfig = IXConfig(_xconfig);
     }
@@ -166,14 +177,15 @@ contract XPool is XApollo, XPToken, XConst {
         controller = manager;
     }
 
-    function setExitFee(uint256 newFee) external _logs_ {
+    function setExitFee(uint256 fee) external {
         require(!finalized, "ERR_IS_FINALIZED");
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
-        require(_exitFee <= xconfig.getMaxExitFee(), "INVALID_EXIT_FEE");
-        _exitFee = newFee;
+        require(fee <= xconfig.getMaxExitFee(), "INVALID_EXIT_FEE");
+        exitFee = fee;
+        emit LOG_EXIT_FEE(fee);
     }
 
-    function bind(address token, uint256 denorm) external _logs_ _lock_ {
+    function bind(address token, uint256 denorm) external _lock_ {
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
         require(!_records[token].bound, "ERR_IS_BOUND");
         require(!finalized, "ERR_IS_FINALIZED");
@@ -196,10 +208,12 @@ contract XPool is XApollo, XPToken, XConst {
             balance: balance
         });
         _tokens.push(token);
+
+        emit LOG_BIND(msg.sender, token, denorm, balance);
     }
 
-    //Swap Fee must be one of {0.1%, 0.3%, 1%, 3%, 10%}
-    function finalize(uint256 _swapFee) external _logs_ {
+    // _swapFee must be one of SWAP_FEES
+    function finalize(uint256 _swapFee) external _lock_ {
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
         require(!finalized, "ERR_IS_FINALIZED");
         require(_tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
@@ -222,6 +236,8 @@ contract XPool is XApollo, XPToken, XConst {
 
         _mintPoolShare(INIT_POOL_SUPPLY);
         _pushPoolShare(msg.sender, INIT_POOL_SUPPLY);
+
+        emit LOG_FINAL(swapFee);
     }
 
     // Absorb any tokens that have been sent to this contract into the pool
@@ -301,16 +317,16 @@ contract XPool is XApollo, XPToken, XConst {
         require(finalized, "ERR_NOT_FINALIZED");
 
         uint256 poolTotal = totalSupply();
-        uint256 exitFee = poolAmountIn.bmul(_exitFee);
-        uint256 pAiAfterExitFee = poolAmountIn.bsub(exitFee);
+        uint256 _exitFee = poolAmountIn.bmul(exitFee);
+        uint256 pAiAfterExitFee = poolAmountIn.bsub(_exitFee);
         uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
         _pullPoolShare(msg.sender, poolAmountIn);
         if (_exitFee > 0) {
-            _pushPoolShare(_origin, exitFee);
+            _pushPoolShare(origin, _exitFee);
         }
-        _burnPoolShare(poolAmountIn);
+        _burnPoolShare(pAiAfterExitFee);
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
@@ -424,7 +440,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 safuFee = tokenAmountIn / 2000; // 0.05%
         //is farm pool
-        if (xconfig.getFarmCreator() == _origin) {
+        if (xconfig.getFarmCreator() == origin) {
             safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), safuFee);
@@ -532,7 +548,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 safuFee = tokenAmountIn / 2000; // 0.05%
         //is farm pool
-        if (xconfig.getFarmCreator() == _origin) {
+        if (xconfig.getFarmCreator() == origin) {
             safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), safuFee);
@@ -575,7 +591,7 @@ contract XPool is XApollo, XPToken, XConst {
         //TODO: in same function
         uint256 _swapFee = tokenAmountIn / 2000; // 0.05%
         //is farm pool
-        if (xconfig.getFarmCreator() == _origin) {
+        if (xconfig.getFarmCreator() == origin) {
             _swapFee = tokenAmountIn.bmul(swapFee);
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), _swapFee);
@@ -611,23 +627,23 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        uint256 exitFee = poolAmountIn.bmul(_exitFee);
+        uint256 _exitFee = poolAmountIn.bmul(exitFee);
 
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn.bsub(exitFee));
-        if (exitFee > 0) {
-            _pushPoolShare(_origin, exitFee);
+        _burnPoolShare(poolAmountIn.bsub(_exitFee));
+        if (_exitFee > 0) {
+            _pushPoolShare(origin, _exitFee);
         }
 
-        uint256 _swapFee = tokenAmountOut / 2000; // 0.05%
+        uint256 _swapFee = tokenAmountOut / 2000; // to SAFU
         //is farm pool
-        if (xconfig.getFarmCreator() == _origin) {
+        if (xconfig.getFarmCreator() == origin) {
             _swapFee = tokenAmountOut.bmul(swapFee);
         }
         _pushUnderlying(tokenOut, xconfig.getSAFU(), _swapFee);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut.bsub(_swapFee));
         return tokenAmountOut;
     }
 

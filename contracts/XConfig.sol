@@ -20,6 +20,10 @@ contract XConfig {
     // XDEX Farm Pool Creator
     address private farmPoolCreator;
 
+    //is farm pool
+
+    //pool sig
+
     uint256 public constant BONE = 10**18;
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
@@ -134,4 +138,10 @@ contract XConfig {
                 farmPoolCreator
             );
     }
+
+    //burn xdex
+
+    //add liquidity to ETH-DAI-XDEX pool
+
+    //stake lp to farm pool
 }
