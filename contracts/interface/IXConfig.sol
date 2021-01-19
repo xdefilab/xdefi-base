@@ -11,7 +11,14 @@ interface IXConfig {
 
     function getSafuFee() external view returns (uint256);
 
+    function getSwapProxy() external view returns (address);
+
     function ethAddress() external pure returns (address);
 
     function XDEXAddress() external pure returns (address);
+
+    function hasPool(address[] calldata tokens, uint256[] calldata denorms)
+        external
+        view
+        returns (bool exist, bytes32 sig);
 }
