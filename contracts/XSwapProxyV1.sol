@@ -196,7 +196,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(!exist, "ERR_POOL_EXISTS");
 
         // create new pool
-        pool = factory.newXPool(poolExpiryBlockHeight);
+        pool = factory.newXPool();
         bool hasETH = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             if (
@@ -210,6 +210,10 @@ contract XSwapProxyV1 is ReentrancyGuard {
         }
         require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
         pool.finalize(swapFee);
+
+        if (expiryBlockHeight > 0) {
+            pool.setExpery(expiryBlockHeight);
+        }
 
         _pools[sig] = true;
         pool.transfer(msg.sender, pool.balanceOf(address(this)));

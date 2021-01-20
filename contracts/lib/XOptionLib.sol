@@ -5,8 +5,8 @@ library XOptionLib {
         require(blockNumber < expiryBlockHeight, "Error: expired");
         uint256 feeRate = sqrt(expiryBlockHeight - blockNumber);
         uint256 actFee = base * 5 / feeRate;
-        uint256 maxFee = base * 3 / 1000;
-        uint256 swapFee = maxFee >= actFee ? actFee : maxFee;
+        uint256 minFee = base * 3 / 1000;
+        uint256 swapFee = minFee >= actFee ? minFee : actFee;
         return swapFee;
     }
 

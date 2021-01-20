@@ -125,4 +125,6 @@ interface IXPool {
         uint256 poolAmountIn,
         uint256 minAmountOut
     ) external returns (uint256 tokenAmountOut);
+
+    function setExpery(uint256 expiryBlockHeight) external;
 }

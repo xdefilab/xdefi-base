@@ -107,13 +107,12 @@ contract XPool is XApollo, XPToken, XConst {
     // if(tx.origin == FarmPoolCreator) is xdex farm pool
     address public origin;
 
-    constructor(address _xconfig, address _controller, uint256 _poolExpiryBlockHeight) public {
+    constructor(address _xconfig, address _controller) public {
         controller = _controller;
         origin = tx.origin;
         swapFee = SWAP_FEES[1]; //default 0.3%
         exitFee = EXIT_ZERO_FEE;
         finalized = false;
-        poolExpiryBlockHeight = _poolExpiryBlockHeight;
         xconfig = IXConfig(_xconfig);
     }
 
@@ -190,6 +189,12 @@ contract XPool is XApollo, XPToken, XConst {
     function setController(address manager) external _logs_ {
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
         controller = manager;
+    }
+
+    function setExpery(uint256 expiryBlockHeight) external _logs_ {
+        require(msg.sender == controller, "ERR_NOT_CONTROLLER");
+        require(_poolExpiryBlockHeight >= block.number, "INVALID_EXPIRY_HEIGHT");
+        poolExpiryBlockHeight = expiryBlockHeight;
     }
 
     function setExitFee(uint256 fee) external {
