@@ -388,6 +388,10 @@ contract XPool is XApollo, XPToken, XConst {
                 swapFee
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+        require(
+            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
+            "ERR_MATH_APPROX"
+        );
 
         tokenAmountOut = calcOutGivenIn(
             inRecord.balance,
@@ -411,10 +415,6 @@ contract XPool is XApollo, XPToken, XConst {
         );
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
-        require(
-            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
-            "ERR_MATH_APPROX"
-        );
 
         emit LOG_SWAP(
             msg.sender,
@@ -496,6 +496,10 @@ contract XPool is XApollo, XPToken, XConst {
                 swapFee
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+        require(
+            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
+            "ERR_MATH_APPROX"
+        );
 
         tokenAmountIn = calcInGivenOut(
             inRecord.balance,
@@ -519,10 +523,6 @@ contract XPool is XApollo, XPToken, XConst {
         );
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
-        require(
-            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
-            "ERR_MATH_APPROX"
-        );
 
         emit LOG_SWAP(
             msg.sender,
