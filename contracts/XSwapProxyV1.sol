@@ -41,6 +41,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
     uint256 public constant MIN_BOUND_TOKENS = 2;
     uint256 public constant MAX_BOUND_TOKENS = 8;
 
+    uint256 public constant MIN_BATCH_SWAPS = 1;
+    uint256 public constant MAX_BATCH_SWAPS = 5;
+
     // WETH9
     IWETH weth;
 
@@ -88,6 +91,11 @@ contract XSwapProxyV1 is ReentrancyGuard {
         uint256 minTotalAmountOut,
         address referrer
     ) public payable nonReentrant returns (uint256 totalAmountOut) {
+        require(
+            swaps.length >= MIN_BATCH_SWAPS && swaps.length <= MAX_BATCH_SWAPS,
+            "ERR_BATCH_COUNT"
+        );
+
         IERC20 TI = IERC20(tokenIn);
         IERC20 TO = IERC20(tokenOut);
 
@@ -143,6 +151,11 @@ contract XSwapProxyV1 is ReentrancyGuard {
         uint256 maxTotalAmountIn,
         address referrer
     ) public payable nonReentrant returns (uint256 totalAmountIn) {
+        require(
+            swaps.length >= MIN_BATCH_SWAPS && swaps.length <= MAX_BATCH_SWAPS,
+            "ERR_BATCH_COUNT"
+        );
+
         IERC20 TI = IERC20(tokenIn);
         IERC20 TO = IERC20(tokenOut);
 
@@ -192,7 +205,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
         // create new pool
         IXFactory factory = IXFactory(factoryAddress);
-        pool = factory.newXPool();
+        IXPool pool = factory.newXPool();
         bool hasETH = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             if (
