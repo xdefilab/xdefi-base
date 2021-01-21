@@ -187,19 +187,14 @@ contract XSwapProxyV1 is ReentrancyGuard {
     }
 
     // Pool Management
-    function create(
+    
+    function _create(
         address factoryAddress,
-        address[] calldata tokens,
-        uint256[] calldata balances,
-        uint256[] calldata denorms,
-<<<<<<< HEAD
-        uint256 swapFee,
-        uint256 poolExpiryBlockHeight
-    ) external payable nonReentrant returns (IXPool pool) {
-=======
+        address[] memory tokens,
+        uint256[] memory balances,
+        uint256[] memory denorms,
         uint256 swapFee
-    ) external payable nonReentrant returns (address) {
->>>>>>> master
+    ) internal returns (address) {
         require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
@@ -226,18 +221,47 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
         pool.finalize(swapFee);
 
-<<<<<<< HEAD
-        if (expiryBlockHeight > 0) {
-            pool.setExpery(expiryBlockHeight);
-        }
-
-        _pools[sig] = true;
-=======
         xconfig.addPoolSig(sig);
->>>>>>> master
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
 
         return address(pool);
+    }
+    
+    function create(
+        address factoryAddress,
+        address[] calldata tokens,
+        uint256[] calldata balances,
+        uint256[] calldata denorms,
+        uint256 swapFee
+    ) external payable nonReentrant returns (address) {
+        return _create(
+            factoryAddress,
+            tokens,
+            balances,
+            denorms,
+            swapFee
+        );
+    }
+
+    function createOptionPool(
+        address factoryAddress,
+        address[] calldata tokens,
+        uint256[] calldata balances,
+        uint256[] calldata denorms,
+        uint256 swapFee,
+        uint256 poolExpiryBlockHeight
+    ) external payable nonReentrant returns (address) {
+        address poolAddr = _create(
+            factoryAddress,
+            tokens,
+            balances,
+            denorms,
+            swapFee
+        );
+
+        IXPool pool = IXPool(poolAddr);
+        pool.setPoolType(1);
+        pool.setExpery(poolExpiryBlockHeight);
     }
 
     function joinPool(

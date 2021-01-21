@@ -10,7 +10,8 @@ import "./interface/IXConfig.sol";
 
 contract XPool is XApollo, XPToken, XConst {
     using XNum for uint256;
-    uint256 public poolExpiryBlockHeight;
+    uint8 public poolType; // 0 is spot and 1 is option
+    uint256 public poolExpiryBlockHeight; // only valid for option pool
 
     //Swap Fees: 0.1%, 0.25%, 1%, 2.5%, 10%
     uint256[5] public SWAP_FEES = [
@@ -179,7 +180,7 @@ contract XPool is XApollo, XPToken, XConst {
         _viewlock_
         returns (uint256) 
     {
-        if (poolExpiryBlockHeight > 0) {
+        if (poolType == 1) {
             return XOptionLib.calSwapFee(block.number, poolExpiryBlockHeight, BONE);
         }
         return swapFee;
@@ -190,9 +191,14 @@ contract XPool is XApollo, XPToken, XConst {
         controller = manager;
     }
 
+    function setPoolType(uint8 XPoolType) external _logs_ {
+        require(msg.sender == controller, "ERR_NOT_CONTROLLER");
+        poolType = XPoolType;
+    }
+    
     function setExpery(uint256 expiryBlockHeight) external _logs_ {
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
-        require(_poolExpiryBlockHeight >= block.number, "INVALID_EXPIRY_HEIGHT");
+        require(poolType == 1, "ERR_NOT_OPTION_POOL");
         poolExpiryBlockHeight = expiryBlockHeight;
     }
 
