@@ -218,9 +218,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         uint256 poolAmountOut,
         uint256[] calldata maxAmountsIn
     ) external payable nonReentrant {
-        
         IXPool pool = IXPool(poolAddress);
-        
+
         address[] memory tokens = pool.getFinalTokens();
         require(maxAmountsIn.length == tokens.length, "ERR_LENGTH_MISMATCH");
 
@@ -262,9 +261,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         uint256 tokenAmountIn,
         uint256 minPoolAmountOut
     ) external payable nonReentrant {
-        
         IXPool pool = IXPool(poolAddress);
-        
+
         bool hasEth = false;
         if (transferFromAllAndApprove(tokenIn, tokenAmountIn, poolAddress)) {
             hasEth = true;
