@@ -104,13 +104,12 @@ contract XPool is XApollo, XPToken, XConst {
     uint256 private _totalWeight;
 
     IXConfig public xconfig;
-    // if(tx.origin == FarmPoolCreator) is xdex farm pool
     address public origin;
 
     constructor(address _xconfig, address _controller) public {
         controller = _controller;
         origin = tx.origin;
-        swapFee = SWAP_FEES[1]; //default 0.3%
+        swapFee = SWAP_FEES[1];
         exitFee = EXIT_ZERO_FEE;
         finalized = false;
         xconfig = IXConfig(_xconfig);
@@ -311,6 +310,7 @@ contract XPool is XApollo, XPToken, XConst {
         _lock_
     {
         require(finalized, "ERR_NOT_FINALIZED");
+        require(maxAmountsIn.length == _tokens.length, "ERR_LENGTH_MISMATCH");
 
         uint256 poolTotal = totalSupply();
         uint256 ratio = poolAmountOut.bdiv(poolTotal);
@@ -335,6 +335,7 @@ contract XPool is XApollo, XPToken, XConst {
         _lock_
     {
         require(finalized, "ERR_NOT_FINALIZED");
+        require(minAmountsOut.length == _tokens.length, "ERR_LENGTH_MISMATCH");
 
         uint256 poolTotal = totalSupply();
         uint256 _exitFee = poolAmountIn.bmul(exitFee);
@@ -366,7 +367,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenOut,
         uint256 minAmountOut,
         uint256 maxPrice
-    ) external _lock_ returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
+    ) external returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
         return
             swapExactAmountInRefer(
                 tokenIn,
@@ -388,6 +389,7 @@ contract XPool is XApollo, XPToken, XConst {
     ) public _lock_ returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(finalized, "ERR_NOT_FINALIZED");
 
         Record storage inRecord = _records[address(tokenIn)];
         Record storage outRecord = _records[address(tokenOut)];
@@ -406,6 +408,10 @@ contract XPool is XApollo, XPToken, XConst {
                 getSwapFee() 
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+        require(
+            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
+            "ERR_MATH_APPROX"
+        );
 
         tokenAmountOut = calcOutGivenIn(
             inRecord.balance,
@@ -429,10 +435,6 @@ contract XPool is XApollo, XPToken, XConst {
         );
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
-        require(
-            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
-            "ERR_MATH_APPROX"
-        );
 
         emit LOG_SWAP(
             msg.sender,
@@ -453,14 +455,13 @@ contract XPool is XApollo, XPToken, XConst {
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = _swapFee / 5; // 20%
+            referFee = _swapFee / 5; // 20% to referrer
             _pushUnderlying(tokenIn, referrer, referFee);
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee = tokenAmountIn / 2000; // 0.05%
-        //is farm pool
-        if (xconfig.getFarmCreator() == origin) {
+        uint256 safuFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
+        if (xconfig.isFarmPool(address(this))) {
             safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), safuFee);
@@ -474,7 +475,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenOut,
         uint256 tokenAmountOut,
         uint256 maxPrice
-    ) external _lock_ returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
+    ) external returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
         return
             swapExactAmountOutRefer(
                 tokenIn,
@@ -496,6 +497,7 @@ contract XPool is XApollo, XPToken, XConst {
     ) public _lock_ returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
         require(_records[tokenIn].bound, "ERR_NOT_BOUND");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+        require(finalized, "ERR_NOT_FINALIZED");
 
         Record storage inRecord = _records[address(tokenIn)];
         Record storage outRecord = _records[address(tokenOut)];
@@ -514,6 +516,10 @@ contract XPool is XApollo, XPToken, XConst {
                 getSwapFee()
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
+        require(
+            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
+            "ERR_MATH_APPROX"
+        );
 
         tokenAmountIn = calcInGivenOut(
             inRecord.balance,
@@ -537,10 +543,6 @@ contract XPool is XApollo, XPToken, XConst {
         );
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
-        require(
-            spotPriceBefore <= tokenAmountIn.bdiv(tokenAmountOut),
-            "ERR_MATH_APPROX"
-        );
 
         emit LOG_SWAP(
             msg.sender,
@@ -561,14 +563,13 @@ contract XPool is XApollo, XPToken, XConst {
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = _swapFee / 5; // 20%
+            referFee = _swapFee / 5; // 20% to referrer
             _pushUnderlying(tokenIn, referrer, referFee);
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee = tokenAmountIn / 2000; // 0.05%
-        //is farm pool
-        if (xconfig.getFarmCreator() == origin) {
+        uint256 safuFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
+        if (xconfig.isFarmPool(address(this))) {
             safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), safuFee);
@@ -608,10 +609,8 @@ contract XPool is XApollo, XPToken, XConst {
         _mintPoolShare(poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
-        //TODO: in same function
-        uint256 _swapFee = tokenAmountIn / 2000; // 0.05%
-        //is farm pool
-        if (xconfig.getFarmCreator() == origin) {
+        uint256 _swapFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
+        if (xconfig.isFarmPool(address(this))) {
             _swapFee = tokenAmountIn.bmul(getSwapFee());
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), _swapFee);
@@ -657,9 +656,8 @@ contract XPool is XApollo, XPToken, XConst {
             _pushPoolShare(origin, _exitFee);
         }
 
-        uint256 _swapFee = tokenAmountOut / 2000; // to SAFU
-        //is farm pool
-        if (xconfig.getFarmCreator() == origin) {
+        uint256 _swapFee = tokenAmountOut.bmul(xconfig.getSafuFee()); // to SAFU
+        if (xconfig.isFarmPool(address(this))) {
             _swapFee = tokenAmountOut.bmul(getSwapFee());
         }
         _pushUnderlying(tokenOut, xconfig.getSAFU(), _swapFee);
