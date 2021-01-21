@@ -179,12 +179,12 @@ contract XSwapProxyV1 is ReentrancyGuard {
     mapping(bytes32 => bool) internal _pools;
 
     function create(
-        IXFactory factory,
+        address factoryAddress,
         address[] calldata tokens,
         uint256[] calldata balances,
         uint256[] calldata denorms,
         uint256 swapFee
-    ) external payable nonReentrant returns (IXPool pool) {
+    ) external payable nonReentrant returns (address) {
         require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
@@ -195,6 +195,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(!exist, "ERR_POOL_EXISTS");
 
         // create new pool
+        IXFactory factory = IXFactory(factoryAddress);
         pool = factory.newXPool();
         bool hasETH = false;
         for (uint256 i = 0; i < tokens.length; i++) {
@@ -212,6 +213,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
         _pools[sig] = true;
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
+
+        return address(pool);
     }
 
     //check pool exist
@@ -243,10 +246,13 @@ contract XSwapProxyV1 is ReentrancyGuard {
     }
 
     function joinPool(
-        IXPool pool,
+        address poolAddress,
         uint256 poolAmountOut,
         uint256[] calldata maxAmountsIn
     ) external payable nonReentrant {
+        
+        IXPool pool = IXPool(poolAddress);
+        
         address[] memory tokens = pool.getFinalTokens();
         require(maxAmountsIn.length == tokens.length, "ERR_LENGTH_MISMATCH");
 
@@ -256,14 +262,14 @@ contract XSwapProxyV1 is ReentrancyGuard {
                 transferFromAllAndApprove(
                     xconfig.ethAddress(),
                     maxAmountsIn[i],
-                    address(pool)
+                    poolAddress
                 );
                 hasEth = true;
             } else {
                 transferFromAllAndApprove(
                     tokens[i],
                     maxAmountsIn[i],
-                    address(pool)
+                    poolAddress
                 );
             }
         }
@@ -283,13 +289,16 @@ contract XSwapProxyV1 is ReentrancyGuard {
     }
 
     function joinswapExternAmountIn(
-        IXPool pool,
+        address poolAddress,
         address tokenIn,
         uint256 tokenAmountIn,
         uint256 minPoolAmountOut
     ) external payable nonReentrant {
+        
+        IXPool pool = IXPool(poolAddress);
+        
         bool hasEth = false;
-        if (transferFromAllAndApprove(tokenIn, tokenAmountIn, address(pool))) {
+        if (transferFromAllAndApprove(tokenIn, tokenAmountIn, poolAddress)) {
             hasEth = true;
         }
         require(msg.value == 0 || hasEth, "ERR_INVALID_PAY");
