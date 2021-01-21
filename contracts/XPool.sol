@@ -347,7 +347,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenOut,
         uint256 minAmountOut,
         uint256 maxPrice
-    ) external _lock_ returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
+    ) external returns (uint256 tokenAmountOut, uint256 spotPriceAfter) {
         return
             swapExactAmountInRefer(
                 tokenIn,
@@ -455,7 +455,7 @@ contract XPool is XApollo, XPToken, XConst {
         address tokenOut,
         uint256 tokenAmountOut,
         uint256 maxPrice
-    ) external _lock_ returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
+    ) external returns (uint256 tokenAmountIn, uint256 spotPriceAfter) {
         return
             swapExactAmountOutRefer(
                 tokenIn,
