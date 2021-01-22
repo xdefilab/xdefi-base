@@ -42,7 +42,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
     uint256 public constant MAX_BOUND_TOKENS = 8;
 
     uint256 public constant MIN_BATCH_SWAPS = 1;
-    uint256 public constant MAX_BATCH_SWAPS = 5;
+    uint256 public constant MAX_BATCH_SWAPS = 4;
 
     // WETH9
     IWETH weth;
@@ -52,8 +52,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
     // Swap
     struct Swap {
         address pool;
-        uint256 tokenInParam; // tokenInAmount / maxAmountIn / limitAmountIn
-        uint256 tokenOutParam; // minAmountOut / tokenAmountOut / limitAmountOut
+        uint256 tokenInParam; // tokenInAmount / maxAmountIn
+        uint256 tokenOutParam; // minAmountOut / tokenAmountOut
         uint256 maxPrice;
     }
 
@@ -101,13 +101,15 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
         transferFromAllTo(TI, totalAmountIn, address(this));
 
+        uint256 actualTotalIn = 0;
         for (uint256 i = 0; i < swaps.length; i++) {
             Swap memory swap = swaps[i];
             IXPool pool = IXPool(swap.pool);
 
             if (TI.allowance(address(this), swap.pool) < totalAmountIn) {
-                TI.safeApprove(swap.pool, uint256(-1));
+                TI.safeApprove(swap.pool, 0);
             }
+            TI.safeApprove(swap.pool, uint256(-1));
 
             (uint256 tokenAmountOut, ) =
                 pool.swapExactAmountInRefer(
@@ -118,9 +120,11 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     swap.maxPrice,
                     referrer
                 );
+
+            actualTotalIn = actualTotalIn.add(swap.tokenInParam);
             totalAmountOut = tokenAmountOut.add(totalAmountOut);
         }
-
+        require(actualTotalIn <= totalAmountIn, "ERR_ACTUAL_IN");
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
 
         transferAll(TO, totalAmountOut);
@@ -166,8 +170,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
             IXPool pool = IXPool(swap.pool);
 
             if (TI.allowance(address(this), swap.pool) < maxTotalAmountIn) {
-                TI.safeApprove(swap.pool, uint256(-1));
+                TI.safeApprove(swap.pool, 0);
             }
+            TI.safeApprove(swap.pool, uint256(-1));
 
             (uint256 tokenAmountIn, ) =
                 pool.swapExactAmountOutRefer(
