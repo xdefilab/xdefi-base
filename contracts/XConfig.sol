@@ -302,4 +302,16 @@ contract XConfig is XConst {
 
         IFarmMaster(farmMaster).withdraw(pid, lpToken, amount);
     }
+
+    // update SAFU and SAFE_FEE to pools
+    function updateSafu(address[] calldata pools) external onlyCore {
+        require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            require(Address.isContract(pools[i]), "ERR_NOT_CONTRACT");
+
+            IXPool pool = IXPool(pools[i]);
+            pool.updateSafu(safu, SAFU_FEE);
+        }
+    }
 }

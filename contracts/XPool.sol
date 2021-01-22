@@ -91,11 +91,16 @@ contract XPool is XApollo, XPToken, XConst {
     bool private _mutex;
 
     address public controller; // has CONTROL role
-    bool public finalized;
 
     // `finalize` require CONTROL, `finalize` sets `can SWAP and can JOIN`
+    bool public finalized;
+
     uint256 public swapFee;
     uint256 public exitFee;
+
+    //SAFU
+    address public SAFU;
+    uint256 public safuFee;
 
     address[] internal _tokens;
     mapping(address => Record) internal _records;
@@ -111,6 +116,8 @@ contract XPool is XApollo, XPToken, XConst {
         exitFee = EXIT_ZERO_FEE;
         finalized = false;
         xconfig = IXConfig(_xconfig);
+        SAFU = xconfig.getSAFU();
+        safuFee = xconfig.getSafuFee();
     }
 
     function isBound(address t) external view returns (bool) {
@@ -182,6 +189,13 @@ contract XPool is XApollo, XPToken, XConst {
         require(fee <= xconfig.getMaxExitFee(), "INVALID_EXIT_FEE");
         exitFee = fee;
         emit LOG_EXIT_FEE(fee);
+    }
+
+    function updateSafu(address safu, uint256 fee) external {
+        require(msg.sender == address(xconfig), "ERR_NOT_CONFIG");
+        require(safu != address(0), "ERR_ZERO_ADDR");
+        SAFU = safu;
+        safuFee = fee;
     }
 
     function bind(address token, uint256 denorm) external _lock_ {
@@ -440,11 +454,11 @@ contract XPool is XApollo, XPToken, XConst {
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee); // to SAFU
         if (xconfig.isFarmPool(address(this))) {
-            safuFee = _swapFee.bsub(referFee);
+            _safuFee = _swapFee.bsub(referFee);
         }
-        _pushUnderlying(tokenIn, xconfig.getSAFU(), safuFee);
+        _pushUnderlying(tokenIn, SAFU, _safuFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountOut, spotPriceAfter);
     }
@@ -548,11 +562,11 @@ contract XPool is XApollo, XPToken, XConst {
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
-        uint256 safuFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee); // to SAFU
         if (xconfig.isFarmPool(address(this))) {
-            safuFee = _swapFee.bsub(referFee);
+            _safuFee = _swapFee.bsub(referFee);
         }
-        _pushUnderlying(tokenIn, xconfig.getSAFU(), safuFee);
+        _pushUnderlying(tokenIn, SAFU, _safuFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountIn, spotPriceAfter);
     }
@@ -589,11 +603,11 @@ contract XPool is XApollo, XPToken, XConst {
         _mintPoolShare(poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
-        uint256 _swapFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee); // to SAFU
         if (xconfig.isFarmPool(address(this))) {
-            _swapFee = tokenAmountIn.bmul(swapFee);
+            _safuFee = tokenAmountIn.bmul(swapFee);
         }
-        _pushUnderlying(tokenIn, xconfig.getSAFU(), _swapFee);
+        _pushUnderlying(tokenIn, SAFU, _safuFee);
         _pushPoolShare(msg.sender, poolAmountOut);
         return poolAmountOut;
     }
@@ -636,12 +650,12 @@ contract XPool is XApollo, XPToken, XConst {
             _pushPoolShare(origin, _exitFee);
         }
 
-        uint256 _swapFee = tokenAmountOut.bmul(xconfig.getSafuFee()); // to SAFU
+        uint256 _safuFee = tokenAmountOut.bmul(safuFee); // to SAFU
         if (xconfig.isFarmPool(address(this))) {
-            _swapFee = tokenAmountOut.bmul(swapFee);
+            _safuFee = tokenAmountOut.bmul(swapFee);
         }
-        _pushUnderlying(tokenOut, xconfig.getSAFU(), _swapFee);
-        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut.bsub(_swapFee));
+        _pushUnderlying(tokenOut, SAFU, _safuFee);
+        _pushUnderlying(tokenOut, msg.sender, tokenAmountOut.bsub(_safuFee));
         return tokenAmountOut;
     }
 
