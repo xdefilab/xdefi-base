@@ -54,6 +54,7 @@ contract XConfig is XConst {
     // sorted pool sigs
     // key: keccak256(tokens[i], norms[i]), value: pool_exists
     mapping(bytes32 => bool) internal poolSigs;
+    uint256 public poolSigCount;
 
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
@@ -113,8 +114,8 @@ contract XConfig is XConst {
     }
 
     // check pool existence which has the same tokens(sorted by address) and weights
-    function hasPool(address[] memory tokens, uint256[] memory denorms)
-        public
+    function hasPool(address[] calldata tokens, uint256[] calldata denorms)
+        external
         view
         returns (bool exist, bytes32 sig)
     {
@@ -174,6 +175,7 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = true;
+        poolSigCount = poolSigCount.add(1);
 
         emit ADD_POOL_SIG(msg.sender, sig);
     }
@@ -184,6 +186,7 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = false;
+        poolSigCount = poolSigCount.minus(1);
 
         emit RM_POOL_SIG(msg.sender, sig);
     }
