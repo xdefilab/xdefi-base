@@ -60,11 +60,13 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 balance
     );
 
+    event LOG_UPDATE_SAFU(address indexed safu, uint256 fee);
+
     event LOG_EXIT_FEE(uint256 fee);
 
     event LOG_FINAL(uint256 swapFee);
 
-    //anonymous event
+    // anonymous event
     event LOG_CALL(
         bytes4 indexed sig,
         address indexed caller,
@@ -98,7 +100,7 @@ contract XPool is XApollo, XPToken, XConst {
     uint256 public swapFee;
     uint256 public exitFee;
 
-    //SAFU
+    // SAFU address and fee
     address public SAFU;
     uint256 public safuFee;
 
@@ -191,11 +193,14 @@ contract XPool is XApollo, XPToken, XConst {
         emit LOG_EXIT_FEE(fee);
     }
 
+    // allow to be updated by xconfig
     function updateSafu(address safu, uint256 fee) external {
         require(msg.sender == address(xconfig), "ERR_NOT_CONFIG");
         require(safu != address(0), "ERR_ZERO_ADDR");
         SAFU = safu;
         safuFee = fee;
+
+        emit LOG_UPDATE_SAFU(safu, fee);
     }
 
     function bind(address token, uint256 denorm) external _lock_ {
@@ -337,6 +342,7 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
+        // to origin
         _pullPoolShare(msg.sender, poolAmountIn);
         if (_exitFee > 0) {
             _pushPoolShare(origin, _exitFee);
@@ -442,7 +448,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 _swapFee = tokenAmountIn.bmul(swapFee);
 
-        //referral
+        // to referral
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
@@ -454,7 +460,8 @@ contract XPool is XApollo, XPToken, XConst {
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
-        uint256 _safuFee = tokenAmountIn.bmul(safuFee); // to SAFU
+        // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee);
         if (xconfig.isFarmPool(address(this))) {
             _safuFee = _swapFee.bsub(referFee);
         }
@@ -550,7 +557,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 _swapFee = tokenAmountIn.bmul(swapFee);
 
-        //referral
+        // to referral
         uint256 referFee = 0;
         if (
             referrer != address(0) &&
@@ -562,7 +569,8 @@ contract XPool is XApollo, XPToken, XConst {
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
-        uint256 _safuFee = tokenAmountIn.bmul(safuFee); // to SAFU
+        // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee);
         if (xconfig.isFarmPool(address(this))) {
             _safuFee = _swapFee.bsub(referFee);
         }
@@ -603,7 +611,8 @@ contract XPool is XApollo, XPToken, XConst {
         _mintPoolShare(poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
-        uint256 _safuFee = tokenAmountIn.bmul(safuFee); // to SAFU
+        // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee);
         if (xconfig.isFarmPool(address(this))) {
             _safuFee = tokenAmountIn.bmul(swapFee);
         }
@@ -640,8 +649,8 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
+        // to origin
         uint256 _exitFee = poolAmountIn.bmul(exitFee);
-
         emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
 
         _pullPoolShare(msg.sender, poolAmountIn);
@@ -650,7 +659,8 @@ contract XPool is XApollo, XPToken, XConst {
             _pushPoolShare(origin, _exitFee);
         }
 
-        uint256 _safuFee = tokenAmountOut.bmul(safuFee); // to SAFU
+        // to SAFU
+        uint256 _safuFee = tokenAmountOut.bmul(safuFee);
         if (xconfig.isFarmPool(address(this))) {
             _safuFee = tokenAmountOut.bmul(swapFee);
         }
