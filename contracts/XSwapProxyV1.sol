@@ -52,8 +52,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
     // Swap
     struct Swap {
         address pool;
-        uint256 tokenInParam; // tokenInAmount / maxAmountIn / limitAmountIn
-        uint256 tokenOutParam; // minAmountOut / tokenAmountOut / limitAmountOut
+        uint256 tokenInParam; // tokenInAmount / maxAmountIn
+        uint256 tokenOutParam; // minAmountOut / tokenAmountOut
         uint256 maxPrice;
     }
 
@@ -101,6 +101,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
         transferFromAllTo(TI, totalAmountIn, address(this));
 
+        uint256 actualTotalIn = 0;
         for (uint256 i = 0; i < swaps.length; i++) {
             Swap memory swap = swaps[i];
             IXPool pool = IXPool(swap.pool);
@@ -119,9 +120,11 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     swap.maxPrice,
                     referrer
                 );
+
+            actualTotalIn = actualTotalIn.add(swap.tokenInParam);
             totalAmountOut = tokenAmountOut.add(totalAmountOut);
         }
-
+        require(actualTotalIn <= totalAmountIn, "ERR_ACTUAL_IN");
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
 
         transferAll(TO, totalAmountOut);
