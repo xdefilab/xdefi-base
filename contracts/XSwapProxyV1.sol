@@ -42,7 +42,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
     uint256 public constant MAX_BOUND_TOKENS = 8;
 
     uint256 public constant MIN_BATCH_SWAPS = 1;
-    uint256 public constant MAX_BATCH_SWAPS = 5;
+    uint256 public constant MAX_BATCH_SWAPS = 4;
 
     // WETH9
     IWETH weth;
@@ -106,8 +106,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
             IXPool pool = IXPool(swap.pool);
 
             if (TI.allowance(address(this), swap.pool) < totalAmountIn) {
-                TI.safeApprove(swap.pool, uint256(-1));
+                TI.safeApprove(swap.pool, 0);
             }
+            TI.safeApprove(swap.pool, uint256(-1));
 
             (uint256 tokenAmountOut, ) =
                 pool.swapExactAmountInRefer(
@@ -166,8 +167,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
             IXPool pool = IXPool(swap.pool);
 
             if (TI.allowance(address(this), swap.pool) < maxTotalAmountIn) {
-                TI.safeApprove(swap.pool, uint256(-1));
+                TI.safeApprove(swap.pool, 0);
             }
+            TI.safeApprove(swap.pool, uint256(-1));
 
             (uint256 tokenAmountIn, ) =
                 pool.swapExactAmountOutRefer(
