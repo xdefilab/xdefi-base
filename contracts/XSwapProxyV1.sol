@@ -37,6 +37,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    uint256 public constant MAX = 2**256 - 1;
     uint256 public constant BONE = 10**18;
     uint256 public constant MIN_BOUND_TOKENS = 2;
     uint256 public constant MAX_BOUND_TOKENS = 8;
@@ -71,7 +72,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address tokenOut,
         uint256 totalAmountIn,
         uint256 minTotalAmountOut
-    ) public payable nonReentrant returns (uint256 totalAmountOut) {
+    ) public payable returns (uint256 totalAmountOut) {
         return
             batchSwapExactInRefer(
                 swaps,
@@ -109,7 +110,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
             if (TI.allowance(address(this), swap.pool) < totalAmountIn) {
                 TI.safeApprove(swap.pool, 0);
             }
-            TI.safeApprove(swap.pool, uint256(-1));
+            TI.safeApprove(swap.pool, MAX);
 
             (uint256 tokenAmountOut, ) =
                 pool.swapExactAmountInRefer(
@@ -137,7 +138,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address tokenIn,
         address tokenOut,
         uint256 maxTotalAmountIn
-    ) public payable nonReentrant returns (uint256 totalAmountIn) {
+    ) public payable returns (uint256 totalAmountIn) {
         return
             batchSwapExactOutRefer(
                 swaps,
@@ -172,7 +173,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
             if (TI.allowance(address(this), swap.pool) < maxTotalAmountIn) {
                 TI.safeApprove(swap.pool, 0);
             }
-            TI.safeApprove(swap.pool, uint256(-1));
+            TI.safeApprove(swap.pool, MAX);
 
             (uint256 tokenAmountIn, ) =
                 pool.swapExactAmountOutRefer(
@@ -205,12 +206,11 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
         // check pool exist
-        (bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
-        require(!exist, "ERR_POOL_EXISTS");
+        //(bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
+        //require(!exist, "ERR_POOL_EXISTS");
 
         // create new pool
-        IXFactory factory = IXFactory(factoryAddress);
-        IXPool pool = factory.newXPool();
+        IXPool pool = IXFactory(factoryAddress).newXPool();
         bool hasETH = false;
         for (uint256 i = 0; i < tokens.length; i++) {
             if (
@@ -225,7 +225,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
         pool.finalize(swapFee);
 
-        xconfig.addPoolSig(sig);
+        //xconfig.addPoolSig(sig);
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
 
         return address(pool);
