@@ -354,14 +354,14 @@ contract XSwapProxyV1 is ReentrancyGuard {
         if (token == xconfig.ethAddress()) {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
-            if (weth.allowance(address(this), spender) < 0) {
+            if (weth.allowance(address(this), spender) < amount) {
                 IERC20(address(weth)).safeApprove(address(spender), 0);
                 IERC20(address(weth)).safeApprove(spender, amount);
             }
             hasETH = true;
         } else {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-            if (IERC20(token).allowance(address(this), spender) < 0) {
+            if (IERC20(token).allowance(address(this), spender) < amount) {
                 IERC20(token).safeApprove(spender, 0);
                 IERC20(token).safeApprove(spender, amount);
             }
