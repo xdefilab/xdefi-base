@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
 import "./interface/IXPool.sol";
 import "./interface/IXFactory.sol";
 import "./interface/IXConfig.sol";
@@ -109,8 +110,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
             if (TI.allowance(address(this), swap.pool) < totalAmountIn) {
                 TI.safeApprove(swap.pool, 0);
+                TI.safeApprove(swap.pool, MAX);
             }
-            TI.safeApprove(swap.pool, MAX);
 
             (uint256 tokenAmountOut, ) =
                 pool.swapExactAmountInRefer(
@@ -172,8 +173,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
             if (TI.allowance(address(this), swap.pool) < maxTotalAmountIn) {
                 TI.safeApprove(swap.pool, 0);
+                TI.safeApprove(swap.pool, MAX);
             }
-            TI.safeApprove(swap.pool, MAX);
 
             (uint256 tokenAmountIn, ) =
                 pool.swapExactAmountOutRefer(
@@ -353,17 +354,17 @@ contract XSwapProxyV1 is ReentrancyGuard {
         if (token == xconfig.ethAddress()) {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
-            if (weth.allowance(address(this), spender) > 0) {
+            if (weth.allowance(address(this), spender) < 0) {
                 IERC20(address(weth)).safeApprove(address(spender), 0);
+                IERC20(address(weth)).safeApprove(spender, amount);
             }
-            IERC20(address(weth)).safeApprove(spender, amount);
             hasETH = true;
         } else {
             IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
-            if (IERC20(token).allowance(address(this), spender) > 0) {
+            if (IERC20(token).allowance(address(this), spender) < 0) {
                 IERC20(token).safeApprove(spender, 0);
+                IERC20(token).safeApprove(spender, amount);
             }
-            IERC20(token).safeApprove(spender, amount);
         }
     }
 }
