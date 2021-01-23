@@ -114,6 +114,7 @@ contract XPool is XApollo, XPToken, XConst {
         exitFee = EXIT_ZERO_FEE;
         finalized = false;
         xconfig = IXConfig(_xconfig);
+        poolType = 0;
     }
 
     function isBound(address t) external view returns (bool) {
@@ -192,11 +193,13 @@ contract XPool is XApollo, XPToken, XConst {
     }
 
     function setPoolType(uint8 XPoolType) external _logs_ {
+        require(!finalized, "ERR_IS_FINALIZED");
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
         poolType = XPoolType;
     }
     
     function setExpery(uint256 expiryBlockHeight) external _logs_ {
+        require(!finalized, "ERR_IS_FINALIZED");
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
         require(poolType == 1, "ERR_NOT_OPTION_POOL");
         poolExpiryBlockHeight = expiryBlockHeight;
@@ -405,13 +408,15 @@ contract XPool is XApollo, XPToken, XConst {
             "ERR_MAX_IN_RATIO"
         );
 
+        uint256 curSwapFee = getSwapFee();
+
         uint256 spotPriceBefore =
             XMath.calcSpotPrice(
                 inRecord.balance,
                 inRecord.denorm,
                 outRecord.balance,
                 outRecord.denorm,
-                getSwapFee() 
+                curSwapFee
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
         require(
@@ -425,7 +430,7 @@ contract XPool is XApollo, XPToken, XConst {
             outRecord.balance,
             outRecord.denorm,
             tokenAmountIn,
-            getSwapFee() 
+            curSwapFee 
         );
         require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
 
@@ -437,7 +442,7 @@ contract XPool is XApollo, XPToken, XConst {
             inRecord.denorm,
             outRecord.balance,
             outRecord.denorm,
-            getSwapFee()
+            curSwapFee
         );
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
@@ -452,7 +457,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
-        uint256 _swapFee = tokenAmountIn.bmul(getSwapFee());
+        uint256 _swapFee = tokenAmountIn.bmul(curSwapFee);
 
         //referral
         uint256 referFee = 0;
@@ -513,13 +518,15 @@ contract XPool is XApollo, XPToken, XConst {
             "ERR_MAX_OUT_RATIO"
         );
 
+        uint256 curSwapFee = getSwapFee();
+
         uint256 spotPriceBefore =
             XMath.calcSpotPrice(
                 inRecord.balance,
                 inRecord.denorm,
                 outRecord.balance,
                 outRecord.denorm,
-                getSwapFee()
+                curSwapFee
             );
         require(spotPriceBefore <= maxPrice, "ERR_BAD_LIMIT_PRICE");
         require(
@@ -533,7 +540,7 @@ contract XPool is XApollo, XPToken, XConst {
             outRecord.balance,
             outRecord.denorm,
             tokenAmountOut,
-            getSwapFee()
+            curSwapFee
         );
         require(tokenAmountIn <= maxAmountIn, "ERR_LIMIT_IN");
 
@@ -545,7 +552,7 @@ contract XPool is XApollo, XPToken, XConst {
             inRecord.denorm,
             outRecord.balance,
             outRecord.denorm,
-            getSwapFee()
+            curSwapFee
         );
         require(spotPriceAfter >= spotPriceBefore, "ERR_MATH_APPROX");
         require(spotPriceAfter <= maxPrice, "ERR_LIMIT_PRICE");
@@ -560,7 +567,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
-        uint256 _swapFee = tokenAmountIn.bmul(getSwapFee());
+        uint256 _swapFee = tokenAmountIn.bmul(curSwapFee);
 
         //referral
         uint256 referFee = 0;
@@ -597,13 +604,15 @@ contract XPool is XApollo, XPToken, XConst {
 
         Record storage inRecord = _records[tokenIn];
 
+        uint256 curSwapFee = getSwapFee();
+
         poolAmountOut = XMath.calcPoolOutGivenSingleIn(
             inRecord.balance,
             inRecord.denorm,
             _totalSupply,
             _totalWeight,
             tokenAmountIn,
-            getSwapFee()
+            curSwapFee
         );
 
         require(poolAmountOut >= minPoolAmountOut, "ERR_LIMIT_OUT");
@@ -617,7 +626,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 _swapFee = tokenAmountIn.bmul(xconfig.getSafuFee()); // to SAFU
         if (xconfig.isFarmPool(address(this))) {
-            _swapFee = tokenAmountIn.bmul(getSwapFee());
+            _swapFee = tokenAmountIn.bmul(curSwapFee);
         }
         _pushUnderlying(tokenIn, xconfig.getSAFU(), _swapFee);
         _pushPoolShare(msg.sender, poolAmountOut);
@@ -634,13 +643,15 @@ contract XPool is XApollo, XPToken, XConst {
 
         Record storage outRecord = _records[tokenOut];
 
+        uint256 curSwapFee = getSwapFee();
+
         tokenAmountOut = XMath.calcSingleOutGivenPoolIn(
             outRecord.balance,
             outRecord.denorm,
             _totalSupply,
             _totalWeight,
             poolAmountIn,
-            getSwapFee()
+            curSwapFee
         );
 
         require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
@@ -664,7 +675,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 _swapFee = tokenAmountOut.bmul(xconfig.getSafuFee()); // to SAFU
         if (xconfig.isFarmPool(address(this))) {
-            _swapFee = tokenAmountOut.bmul(getSwapFee());
+            _swapFee = tokenAmountOut.bmul(curSwapFee);
         }
         _pushUnderlying(tokenOut, xconfig.getSAFU(), _swapFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut.bsub(_swapFee));

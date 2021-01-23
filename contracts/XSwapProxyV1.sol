@@ -187,14 +187,13 @@ contract XSwapProxyV1 is ReentrancyGuard {
     }
 
     // Pool Management
-    
-    function _create(
+    function create(
         address factoryAddress,
-        address[] memory tokens,
-        uint256[] memory balances,
-        uint256[] memory denorms,
+        address[] calldata tokens,
+        uint256[] calldata balances,
+        uint256[] calldata denorms,
         uint256 swapFee
-    ) internal returns (address) {
+    ) external payable nonReentrant returns (address) {
         require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
@@ -226,22 +225,6 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
         return address(pool);
     }
-    
-    function create(
-        address factoryAddress,
-        address[] calldata tokens,
-        uint256[] calldata balances,
-        uint256[] calldata denorms,
-        uint256 swapFee
-    ) external payable nonReentrant returns (address) {
-        return _create(
-            factoryAddress,
-            tokens,
-            balances,
-            denorms,
-            swapFee
-        );
-    }
 
     function createOptionPool(
         address factoryAddress,
@@ -251,17 +234,40 @@ contract XSwapProxyV1 is ReentrancyGuard {
         uint256 swapFee,
         uint256 poolExpiryBlockHeight
     ) external payable nonReentrant returns (address) {
-        address poolAddr = _create(
-            factoryAddress,
-            tokens,
-            balances,
-            denorms,
-            swapFee
-        );
+        require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
+        require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
+        require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+        require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
-        IXPool pool = IXPool(poolAddr);
+        // check pool exist
+        (bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
+        require(!exist, "ERR_POOL_EXISTS");
+
+        // create new pool
+        IXFactory factory = IXFactory(factoryAddress);
+        IXPool pool = factory.newXPool();
+        bool hasETH = false;
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (
+                transferFromAllTo(IERC20(tokens[i]), balances[i], address(pool))
+            ) {
+                hasETH = true;
+                pool.bind(address(weth), denorms[i]);
+            } else {
+                pool.bind(tokens[i], denorms[i]);
+            }
+        }
+        
         pool.setPoolType(1);
-        pool.setExpery(poolExpiryBlockHeight);
+        pool.setExpery(expiryBlockHeight);
+        
+        require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
+        pool.finalize(swapFee);
+
+        xconfig.addPoolSig(sig);
+        pool.transfer(msg.sender, pool.balanceOf(address(this)));
+
+        return address(pool);
     }
 
     function joinPool(
