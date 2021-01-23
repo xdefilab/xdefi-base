@@ -186,7 +186,7 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = false;
-        poolSigCount = poolSigCount.minus(1);
+        poolSigCount = poolSigCount.sub(1);
 
         emit RM_POOL_SIG(msg.sender, sig);
     }
