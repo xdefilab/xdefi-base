@@ -355,7 +355,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
             if (weth.allowance(address(this), spender) < amount) {
-                IERC20(address(weth)).safeApprove(address(spender), 0);
+                IERC20(address(weth)).safeApprove(spender, 0);
                 IERC20(address(weth)).safeApprove(spender, amount);
             }
             hasETH = true;
