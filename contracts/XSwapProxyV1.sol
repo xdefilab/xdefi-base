@@ -1,14 +1,13 @@
 pragma solidity 0.5.17;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
 import "./interface/IXPool.sol";
 import "./interface/IXFactory.sol";
 import "./interface/IXConfig.sol";
+import "./interface/IERC20.sol";
+import "./lib/XNum.sol";
+import "./lib/SafeERC20.sol";
+import "./lib/ReentrancyGuard.sol";
 
 // WETH9
 interface IWETH {
@@ -35,7 +34,7 @@ interface IWETH {
 }
 
 contract XSwapProxyV1 is ReentrancyGuard {
-    using SafeMath for uint256;
+    using XNum for uint256;
     using SafeERC20 for IERC20;
 
     uint256 public constant MAX = 2**256 - 1;
@@ -123,8 +122,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     referrer
                 );
 
-            actualTotalIn = actualTotalIn.add(swap.tokenInParam);
-            totalAmountOut = tokenAmountOut.add(totalAmountOut);
+            actualTotalIn = actualTotalIn.badd(swap.tokenInParam);
+            totalAmountOut = tokenAmountOut.badd(totalAmountOut);
         }
         require(actualTotalIn <= totalAmountIn, "ERR_ACTUAL_IN");
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
@@ -185,7 +184,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     swap.maxPrice,
                     referrer
                 );
-            totalAmountIn = tokenAmountIn.add(totalAmountIn);
+            totalAmountIn = tokenAmountIn.badd(totalAmountIn);
         }
         require(totalAmountIn <= maxTotalAmountIn, "ERR_LIMIT_IN");
 

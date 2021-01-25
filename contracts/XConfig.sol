@@ -1,11 +1,11 @@
 pragma solidity 0.5.17;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./interface/IXPool.sol";
 import "./XConst.sol";
+import "./interface/IXPool.sol";
+import "./interface/IERC20.sol";
+import "./lib/Address.sol";
+import "./lib/SafeERC20.sol";
+import "./lib/XNum.sol";
 
 // https://github.com/xdefilab/xdefi-governance-token/blob/master/contracts/XDEX.sol
 interface IXDEX {
@@ -30,7 +30,7 @@ interface IFarmMaster {
 }
 
 contract XConfig is XConst {
-    using SafeMath for uint256;
+    using XNum for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
 
@@ -125,7 +125,7 @@ contract XConfig is XConst {
 
         uint256 totalWeight = 0;
         for (uint8 i = 0; i < tokens.length; i++) {
-            totalWeight = totalWeight.add(denorms[i]);
+            totalWeight = totalWeight.badd(denorms[i]);
         }
 
         bytes memory poolInfo;
@@ -134,7 +134,7 @@ contract XConfig is XConst {
                 require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
             }
             //normalized weight (multiplied by 100)
-            uint256 nWeight = denorms[i].mul(100).div(totalWeight);
+            uint256 nWeight = denorms[i].bmul(100).bdiv(totalWeight);
             poolInfo = abi.encodePacked(poolInfo, tokens[i], nWeight);
         }
         sig = keccak256(poolInfo);
@@ -175,7 +175,7 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = true;
-        poolSigCount = poolSigCount.add(1);
+        poolSigCount = poolSigCount.badd(1);
 
         emit ADD_POOL_SIG(msg.sender, sig);
     }
@@ -186,7 +186,7 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = false;
-        poolSigCount = poolSigCount.sub(1);
+        poolSigCount = poolSigCount.bsub(1);
 
         emit RM_POOL_SIG(msg.sender, sig);
     }

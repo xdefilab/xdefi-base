@@ -15,6 +15,9 @@ contract XConst {
     // min effective value: 0.000001 TOKEN
     uint256 public constant MIN_BALANCE = 10**6;
 
+    // BONE/(10**10) XPT
+    uint256 public constant MIN_POOL_AMOUNT = 10**8;
+
     uint256 public constant INIT_POOL_SUPPLY = BONE * 100;
 
     uint256 public constant MAX_IN_RATIO = BONE / 2;

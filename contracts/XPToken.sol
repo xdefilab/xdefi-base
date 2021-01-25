@@ -2,7 +2,7 @@ pragma solidity 0.5.17;
 
 import "./XVersion.sol";
 import "./lib/XNum.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interface/IERC20.sol";
 
 // Highly opinionated token implementation
 contract XTokenBase {
@@ -59,15 +59,11 @@ contract XPToken is XTokenBase, IERC20, XApollo {
         return _decimals;
     }
 
-    function allowance(address src, address dst)
-        external
-        view
-        returns (uint256)
-    {
+    function allowance(address src, address dst) public view returns (uint256) {
         return _allowance[src][dst];
     }
 
-    function balanceOf(address whom) external view returns (uint256) {
+    function balanceOf(address whom) public view returns (uint256) {
         return _balance[whom];
     }
 
@@ -75,13 +71,13 @@ contract XPToken is XTokenBase, IERC20, XApollo {
         return _totalSupply;
     }
 
-    function approve(address dst, uint256 amt) external returns (bool) {
+    function approve(address dst, uint256 amt) public returns (bool) {
         _allowance[msg.sender][dst] = amt;
         emit Approval(msg.sender, dst, amt);
         return true;
     }
 
-    function transfer(address dst, uint256 amt) external returns (bool) {
+    function transfer(address dst, uint256 amt) public returns (bool) {
         _move(msg.sender, dst, amt);
         return true;
     }
@@ -90,7 +86,7 @@ contract XPToken is XTokenBase, IERC20, XApollo {
         address src,
         address dst,
         uint256 amt
-    ) external returns (bool) {
+    ) public returns (bool) {
         require(
             msg.sender == src || amt <= _allowance[src][msg.sender],
             "ERR_BTOKEN_BAD_CALLER"
