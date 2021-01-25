@@ -12,23 +12,6 @@ interface IXDEX {
     function burnForSelf(uint256 amount) external;
 }
 
-// https://github.com/xdefilab/xdefi-governance-token/blob/master/contracts/FarmMaster.sol
-interface IFarmMaster {
-    // Deposit LP tokens to FarmMaster for XDEX allocation.
-    function deposit(
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external;
-
-    // Withdraw LP tokens from MasterChef.
-    function withdraw(
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external;
-}
-
 contract XConfig is XConst {
     using XNum for uint256;
     using Address for address;
@@ -69,6 +52,8 @@ contract XConfig is XConst {
 
     event ADD_FARM_POOL(address indexed pool);
     event RM_FARM_POOL(address indexed pool);
+
+    event COLLECT(address indexed token, uint256 amount);
 
     modifier onlyCore() {
         require(msg.sender == core, "ERR_CORE_AUTH");
@@ -248,7 +233,7 @@ contract XConfig is XConst {
         require(Address.isContract(pool), "ERR_NOT_CONTRACT");
         IXPool xpool = IXPool(pool);
 
-        //safe approve
+        //safe approve to maxAmountsIn
         address[] memory tokens = xpool.getFinalTokens();
         for (uint256 i = 0; i < tokens.length; i++) {
             IERC20 TI = IERC20(tokens[i]);
@@ -276,37 +261,7 @@ contract XConfig is XConst {
         IXDEX(XDEX).burnForSelf(amount);
     }
 
-    // deposit lp to farm pool
-    function depositToFarm(
-        address farmMaster,
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external onlyCore {
-        require(Address.isContract(farmMaster), "ERR_NOT_CONTRACT");
-
-        //safe approve
-        if (lpToken.allowance(address(this), farmMaster) > 0) {
-            lpToken.safeApprove(farmMaster, 0);
-        }
-        lpToken.safeApprove(farmMaster, amount);
-
-        IFarmMaster(farmMaster).deposit(pid, lpToken, amount);
-    }
-
-    // withdraw lp from farm pool
-    function withdrawFromFarm(
-        address farmMaster,
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external onlyCore {
-        require(Address.isContract(farmMaster), "ERR_NOT_CONTRACT");
-
-        IFarmMaster(farmMaster).withdraw(pid, lpToken, amount);
-    }
-
-    // update SAFU and SAFE_FEE to pools
+    // update SAFU address and SAFE_FEE to pools
     function updateSafu(address[] calldata pools) external onlyCore {
         require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
 
@@ -316,5 +271,14 @@ contract XConfig is XConst {
             IXPool pool = IXPool(pools[i]);
             pool.updateSafu(safu, SAFU_FEE);
         }
+    }
+
+    function collect(address token, address to) external onlyCore {
+        IERC20 TI = IERC20(token);
+
+        uint256 collected = TI.balanceOf(address(this));
+        TI.safeTransfer(to, collected);
+
+        emit COLLECT(TI, collected);
     }
 }
