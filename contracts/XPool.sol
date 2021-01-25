@@ -214,7 +214,12 @@ contract XPool is XApollo, XPToken, XConst {
         require(denorm <= MAX_WEIGHT, "ERR_MAX_WEIGHT");
 
         uint256 balance = IERC20(token).balanceOf(address(this));
-        require(balance >= MIN_BALANCE, "ERR_MIN_BALANCE");
+
+        uint256 decimal = 10**uint256(IERC20(token).decimals());
+        require(decimal >= 10**6, "ERR_TOO_SMALL");
+
+        // 0.000001 TOKEN
+        require(balance >= decimal / MIN_BALANCE, "ERR_MIN_AMOUNT");
 
         _totalWeight = _totalWeight.badd(denorm);
         require(_totalWeight <= MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
@@ -335,6 +340,9 @@ contract XPool is XApollo, XPToken, XConst {
     {
         require(finalized, "ERR_NOT_FINALIZED");
         require(minAmountsOut.length == _tokens.length, "ERR_LENGTH_MISMATCH");
+
+        // min pool amount
+        require(poolAmountIn >= MIN_POOL_AMOUNT, "ERR_MIN_AMOUNT");
 
         uint256 poolTotal = totalSupply();
         uint256 _exitFee = poolAmountIn.bmul(exitFee);
@@ -628,6 +636,9 @@ contract XPool is XApollo, XPToken, XConst {
     ) external _logs_ _lock_ returns (uint256 tokenAmountOut) {
         require(finalized, "ERR_NOT_FINALIZED");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
+
+        // min pool amount
+        require(poolAmountIn >= MIN_POOL_AMOUNT, "ERR_MIN_AMOUNT");
 
         Record storage outRecord = _records[tokenOut];
 
