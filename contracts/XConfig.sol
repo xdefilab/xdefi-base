@@ -279,6 +279,6 @@ contract XConfig is XConst {
         uint256 collected = TI.balanceOf(address(this));
         TI.safeTransfer(to, collected);
 
-        emit COLLECT(TI, collected);
+        emit COLLECT(token, collected);
     }
 }
