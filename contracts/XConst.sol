@@ -11,7 +11,9 @@ contract XConst {
     uint256 public constant MIN_WEIGHT = BONE;
     uint256 public constant MAX_WEIGHT = BONE * 50;
     uint256 public constant MAX_TOTAL_WEIGHT = BONE * 50;
-    uint256 public constant MIN_BALANCE = BONE / 10**12;
+
+    // min effective value: 0.000001 TOKEN
+    uint256 public constant MIN_BALANCE = 10**6;
 
     uint256 public constant INIT_POOL_SUPPLY = BONE * 100;
 

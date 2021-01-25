@@ -214,7 +214,12 @@ contract XPool is XApollo, XPToken, XConst {
         require(denorm <= MAX_WEIGHT, "ERR_MAX_WEIGHT");
 
         uint256 balance = IERC20(token).balanceOf(address(this));
-        require(balance >= MIN_BALANCE, "ERR_MIN_BALANCE");
+
+        uint256 decimal = 10**uint256(IERC20(token).decimals());
+        require(decimal >= 10**6, "ERR_TOO_SMALL");
+
+        // 0.000001 TOKEN
+        require(balance >= decimal / MIN_BALANCE, "ERR_MIN_BALANCE");
 
         _totalWeight = _totalWeight.badd(denorm);
         require(_totalWeight <= MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");

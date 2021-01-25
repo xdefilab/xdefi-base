@@ -199,7 +199,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address[] calldata tokens,
         uint256[] calldata balances,
         uint256[] calldata denorms,
-        uint256 swapFee
+        uint256 swapFee,
+        uint256 exitFee
     ) external payable nonReentrant returns (address) {
         require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
@@ -207,8 +208,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
         // check pool exist
-        //(bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
-        //require(!exist, "ERR_POOL_EXISTS");
+        (bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
+        require(!exist, "ERR_POOL_EXISTS");
 
         // create new pool
         IXPool pool = IXFactory(factoryAddress).newXPool();
@@ -224,9 +225,10 @@ contract XSwapProxyV1 is ReentrancyGuard {
             }
         }
         require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
+        pool.setExitFee(exitFee);
         pool.finalize(swapFee);
 
-        //xconfig.addPoolSig(sig);
+        xconfig.addPoolSig(sig);
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
 
         return address(pool);
