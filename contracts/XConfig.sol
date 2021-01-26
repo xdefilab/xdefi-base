@@ -99,6 +99,7 @@ contract XConfig is XConst {
     }
 
     // check pool existence which has the same tokens(sorted by address) and weights
+    // the decimals of denorms will allways between [10**18, 50 * 10**18]
     function hasPool(address[] calldata tokens, uint256[] calldata denorms)
         external
         view

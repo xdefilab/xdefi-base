@@ -41,7 +41,7 @@ contract XFactory is XApollo {
     }
 
     function setPoolCreator(address _creator) external {
-        require(msg.sender == xconfig.getCore(), "ERR_CORE_AUTH");
+        require(msg.sender == xconfig.getCore(), "ERR_NOT_AUTH");
         require(_creator != address(0), "ERR_ZERO_ADDR");
 
         emit SET_XPOOL_CREATOR(address(xcreator), _creator);

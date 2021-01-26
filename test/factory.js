@@ -2,6 +2,10 @@ const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
 const truffleAssert = require('truffle-assertions');
+const XPoolCreator = artifacts.require('XPoolCreator');
+
+const swapFee = 0.001; // 0.1%;
+const exitFee = 0;
 
 contract('XFactory', async (accounts) => {
     const admin = accounts[0];
@@ -24,6 +28,9 @@ contract('XFactory', async (accounts) => {
 
         before(async () => {
             factory = await XFactory.deployed();
+            const poolCreator = await XPoolCreator.deployed();
+            await factory.setPoolCreator(poolCreator.address);
+
             weth = await TToken.new('Wrapped Ether', 'WETH', 18, admin);
             dai = await TToken.new('Dai Stablecoin', 'DAI', 18, admin);
 
@@ -64,36 +71,26 @@ contract('XFactory', async (accounts) => {
             assert.isTrue(isXPool);
         });
 
-        it('fails nonAdmin calls collect', async () => {
-            await truffleAssert.reverts(factory.collect(nonAdmin, { from: nonAdmin }), 'Not Authorized');
-        });
-
         it('admin collects fees', async () => {
-            await pool.bind(WETH, toWei('5'), toWei('5')); //50% WETH
-            await pool.bind(DAI, toWei('200'), toWei('5'));//50% DAI
+            await weth.transfer(POOL, toWei('5'));
+            await dai.transfer(POOL, toWei('200'));
 
-            await pool.finalize();
+            await pool.bind(WETH, toWei('5')); //50% WETH
+            await pool.bind(DAI, toWei('5'));//50% DAI
+
+            const swapFeeValue = toWei(String(swapFee));
+            const exitFeeValue = toWei(String(exitFee));
+
+            pool.setExitFee(exitFeeValue);
+
+            await pool.finalize(swapFeeValue);
 
             await pool.joinPool(toWei('10'), [MAX, MAX], { from: nonAdmin });
             await pool.exitPool(toWei('10'), [toWei('0'), toWei('0')], { from: nonAdmin });
 
-            // Exit fee = 0 so this wont do anything
-            await factory.collect(POOL);
-
+            // Exit Fee = 0 so this wont do anything
             const adminBalance = await pool.balanceOf(admin);
             assert.equal(fromWei(adminBalance), '100');
-        });
-
-        it('nonadmin cant set core address', async () => {
-            await truffleAssert.reverts(factory.setCore(nonAdmin, { from: nonAdmin }), 'Not Authorized');
-        });
-
-        it('admin changes core address', async () => {
-            let result = await factory.setCore(user2);
-            truffleAssert.eventEmitted(result, "SET_CORE");
-
-            const core = await factory.core();
-            assert.equal(core, user2);
         });
     });
 });
