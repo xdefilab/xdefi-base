@@ -100,9 +100,10 @@ contract XPool is XApollo, XPToken, XConst {
     uint256 public swapFee;
     uint256 public exitFee;
 
-    // SAFU address and fee
+    // Pool Governance
     address public SAFU;
     uint256 public safuFee;
+    bool public isFarmPool;
 
     address[] internal _tokens;
     mapping(address => Record) internal _records;
@@ -193,7 +194,7 @@ contract XPool is XApollo, XPToken, XConst {
         emit LOG_EXIT_FEE(fee);
     }
 
-    // allow to be updated by xconfig
+    // allow SAFU address and SAFE FEE be updated by xconfig
     function updateSafu(address safu, uint256 fee) external {
         require(msg.sender == address(xconfig), "ERR_NOT_CONFIG");
         require(safu != address(0), "ERR_ZERO_ADDR");
@@ -201,6 +202,12 @@ contract XPool is XApollo, XPToken, XConst {
         safuFee = fee;
 
         emit LOG_UPDATE_SAFU(safu, fee);
+    }
+
+    // allow isFarmPool be updated by xconfig
+    function updateFarm(bool isFarm) external {
+        require(msg.sender == address(xconfig), "ERR_NOT_CONFIG");
+        isFarmPool = isFarm;
     }
 
     function bind(address token, uint256 denorm) external _lock_ {
@@ -471,7 +478,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         // to SAFU
         uint256 _safuFee = tokenAmountIn.bmul(safuFee);
-        if (xconfig.isFarmPool(address(this))) {
+        if (isFarmPool) {
             _safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, SAFU, _safuFee);
@@ -582,7 +589,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         // to SAFU
         uint256 _safuFee = tokenAmountIn.bmul(safuFee);
-        if (xconfig.isFarmPool(address(this))) {
+        if (isFarmPool) {
             _safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, SAFU, _safuFee);
@@ -625,7 +632,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         // to SAFU
         uint256 _safuFee = tokenAmountIn.bmul(safuFee);
-        if (xconfig.isFarmPool(address(this))) {
+        if (isFarmPool) {
             _safuFee = tokenAmountIn.bmul(swapFee);
         }
         _pushUnderlying(tokenIn, SAFU, _safuFee);
@@ -678,7 +685,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         // to SAFU
         uint256 _safuFee = tokenAmountOut.bmul(safuFee);
-        if (xconfig.isFarmPool(address(this))) {
+        if (isFarmPool) {
             _safuFee = tokenAmountOut.bmul(swapFee);
         }
         _pushUnderlying(tokenOut, SAFU, _safuFee);
