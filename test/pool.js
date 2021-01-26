@@ -1,12 +1,13 @@
 const truffleAssert = require('truffle-assertions');
-const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
+const { calcOutGivenIn, calcInGivenOut, calcRelative, calcRelativeDiff } = require('../lib/calc_comparisons');
 const { address } = require('./utils/Ethereum');
 const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
 const verbose = process.env.VERBOSE;
+const XConfig = artifacts.require('XConfig');
 
-const swapFee = 0.0025; // 0.25%;
+const swapFee = 0.001; // 0.1%;
 
 contract('XPool', async (accounts) => {
     const admin = accounts[0];
@@ -20,11 +21,13 @@ contract('XPool', async (accounts) => {
     //token address
     let WETH; let MKR; let DAI; let XXX; // addresses
     let POOL; // pool address
+    let SAFU; // SAFU address
 
     //instance
     let weth; let mkr; let dai; let xxx; // TTokens
     let factory; // XPool factory
     let pool; // first pool w/ defaults
+    let safu; //safu
 
     //token address
     let AA; let BB; let CC; let DD;
@@ -32,6 +35,9 @@ contract('XPool', async (accounts) => {
 
     before(async () => {
         factory = await XFactory.deployed();
+
+        safu = await XConfig.deployed();
+        SAFU = safu.address;
 
         POOL = await factory.newXPool.call();
         await factory.newXPool();
@@ -256,7 +262,7 @@ contract('XPool', async (accounts) => {
             assert.equal(3, numTokens);
 
             const swapFee = await pool.swapFee();
-            assert.equal(toWei('0.0025'), swapFee);
+            assert.equal(toWei('0.001'), swapFee);
         });
 
         it('Get final weights', async () => {
@@ -265,7 +271,10 @@ contract('XPool', async (accounts) => {
             const mkr_denorm = await pool.getDenormalizedWeight(MKR);
             const dai_denorm = await pool.getDenormalizedWeight(DAI);
 
-            console.log(`totalWeight: ${totalWeight}, weth_denorm: ${weth_denorm}, mkr_denorm: ${mkr_denorm}, dai_denorm: ${dai_denorm}`);
+            //console.log(`totalWeight: ${totalWeight}, weth_denorm: ${weth_denorm}, mkr_denorm: ${mkr_denorm}, dai_denorm: ${dai_denorm}`);
+            assert.equal(5, fromWei(weth_denorm));
+            assert.equal(5, fromWei(mkr_denorm));
+            assert.equal(5, fromWei(dai_denorm));
         });
     });
 
@@ -300,18 +309,11 @@ contract('XPool', async (accounts) => {
         */
 
         it('getSpotPriceSansFee and getSpotPrice', async () => {
-            let weth_balance_pool = await weth.balanceOf(POOL);
-            let dai_balance_pool = await dai.balanceOf(POOL);
-            let mkr_balance_pool = await mkr.balanceOf(POOL);
-            let xxx_balance_pool = await xxx.balanceOf(POOL);
-            console.log(`weth_balance_pool: ${weth_balance_pool}, dai_balance_pool: ${dai_balance_pool}, mkr_balance_pool: ${mkr_balance_pool}, xxx_balance_pool: ${xxx_balance_pool}`);
-
             const wethPrice = await pool.getSpotPriceSansFee(DAI, WETH);
             assert.equal(200, fromWei(wethPrice));
 
             const wethPriceFee = await pool.getSpotPrice(DAI, WETH);
-            const wethPriceFeeCheck = ((10500 / 5) / (52.5 / 5)) * (1 / (1 - 0.025));
-            // 200.6018054162487462
+            const wethPriceFeeCheck = ((10500 / 5) / (52.5 / 5)) * (1 / (1 - 0.001));
             assert.equal(fromWei(wethPriceFee), wethPriceFeeCheck);
         });
 
@@ -326,21 +328,36 @@ contract('XPool', async (accounts) => {
             );
         });
 
-        it('swapExactAmountIn without referrer', async () => {
+        it('swapExactAmountIn with referrer', async () => {
+            let balance_user1_before = fromWei(await weth.balanceOf(user1));
+            let balance_safu_before = fromWei(await weth.balanceOf(SAFU));
+
             // 2.5 WETH -> DAI
-            const expected = calcOutGivenIn(52.5, 5, 10500, 5, 2.5, 0.025);
-            const txr = await pool.swapExactAmountIn(
+            const expected = calcOutGivenIn(52.5, 5, 10500, 5, 2.5, 0.001);
+            const txr = await pool.swapExactAmountInRefer(
                 WETH,
                 toWei('2.5'),
                 DAI,
                 toWei('475'),
                 toWei('200'),
+                user1,
                 { from: user2 },
             );
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
-            // 475.905805337091423
 
+            let balance_user1_after = fromWei(await weth.balanceOf(user1));
+            let balance_safu_after = fromWei(await weth.balanceOf(SAFU));
+
+            // 2.5 * 0.1% * 20% = 0.0005 WETH to user1
+            const referReward = calcRelative(balance_user1_after, balance_user1_before);
+            assert.equal(0.0005, referReward);
+
+            // noFarmPool sent 2.5 * 0.05% = 0.00125 WETH to SAFU
+            const safuReward = calcRelative(balance_safu_after, balance_safu_before);
+            assert.equal(0.00125, safuReward);
+
+            // 475.905805337091423
             const actual = fromWei(log.args[4]);
             const relDif = calcRelativeDiff(expected, actual);
             if (verbose) {
@@ -355,9 +372,20 @@ contract('XPool', async (accounts) => {
             const userDaiBalance = await dai.balanceOf(user2);
             assert.equal(fromWei(userDaiBalance), Number(fromWei(log.args[4])));
 
+            let weth_balance_pool = await weth.balanceOf(POOL);
+            let dai_balance_pool = await dai.balanceOf(POOL);
+            let mkr_balance_pool = await mkr.balanceOf(POOL);
+            let xxx_balance_pool = await xxx.balanceOf(POOL);
+            console.log(`weth_balance_pool: ${weth_balance_pool}, dai_balance_pool: ${dai_balance_pool}, mkr_balance_pool: ${mkr_balance_pool}, xxx_balance_pool: ${xxx_balance_pool}`);
+
+            let weth_balance_record = await pool.getBalance(WETH);
+            let dai_balance_record = await pool.getBalance(DAI);
+            let mkr_balance_record = await pool.getBalance(MKR);
+            console.log(`weth_balance_record: ${weth_balance_record}, dai_balance_record: ${dai_balance_record}, mkr_balance_record: ${mkr_balance_record}`);
+
             // 182.804672101083406128
             const wethPrice = await pool.getSpotPrice(DAI, WETH);
-            const wethPriceFeeCheck = ((10024.094194662908577 / 5) / (55 / 5)) * (1 / (1 - 0.025));
+            const wethPriceFeeCheck = ((10024.094194662908577 / 5) / (55 / 5)) * (1 / (1 - 0.001));
             assert.approximately(Number(fromWei(wethPrice)), Number(wethPriceFeeCheck), errorDelta);
 
             const daiNormWeight = await pool.getNormalizedWeight(DAI);
@@ -366,16 +394,17 @@ contract('XPool', async (accounts) => {
 
         //TODO: 'swapExactAmountIn with referrer'
 
-        it('swapExactAmountOut without referrer', async () => {
+        it('swapExactAmountOut with referrer', async () => {
             // ETH -> 1 MKR
-            // const amountIn = (55 * (((21 / (21 - 1)) ** (5 / 5)) - 1)) / (1 - 0.003);
-            const expected = calcInGivenOut(55, 5, 21, 5, 1, 0.025);
+            // const amountIn = (55 * (((21 / (21 - 1)) ** (5 / 5)) - 1)) / (1 - 0.001);
+            const expected = calcInGivenOut(55, 5, 21, 5, 1, 0.001);
             const txr = await pool.swapExactAmountOut(
                 WETH,
                 toWei('3'),
                 MKR,
                 toWei('1.0'),
                 toWei('500'),
+                user1,
                 { from: user2 },
             );
             const log = txr.logs[0];
