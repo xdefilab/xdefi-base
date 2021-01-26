@@ -26,7 +26,7 @@ contract XConfig is XConst {
 
     // Secure Asset Fund for Users(SAFU) address
     address private safu;
-    uint256 public SAFU_FEE = (5 * BONE) / 10000;
+    uint256 public SAFU_FEE = (5 * BONE) / 10000; // 0.05%
 
     // Swap Proxy Address
     address private swapProxy;
