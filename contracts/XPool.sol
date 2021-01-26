@@ -465,6 +465,7 @@ contract XPool is XApollo, XPToken, XConst {
         ) {
             referFee = _swapFee / 5; // 20% to referrer
             _pushUnderlying(tokenIn, referrer, referFee);
+            inRecord.balance = (inRecord.balance).bsub(referFee);
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
@@ -474,6 +475,8 @@ contract XPool is XApollo, XPToken, XConst {
             _safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, SAFU, _safuFee);
+        inRecord.balance = (inRecord.balance).bsub(_safuFee);
+
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountOut, spotPriceAfter);
     }
@@ -564,7 +567,6 @@ contract XPool is XApollo, XPToken, XConst {
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         uint256 _swapFee = tokenAmountIn.bmul(swapFee);
-
         // to referral
         uint256 referFee = 0;
         if (
@@ -574,6 +576,7 @@ contract XPool is XApollo, XPToken, XConst {
         ) {
             referFee = _swapFee / 5; // 20% to referrer
             _pushUnderlying(tokenIn, referrer, referFee);
+            inRecord.balance = (inRecord.balance).bsub(referFee);
             emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
         }
 
@@ -583,6 +586,8 @@ contract XPool is XApollo, XPToken, XConst {
             _safuFee = _swapFee.bsub(referFee);
         }
         _pushUnderlying(tokenIn, SAFU, _safuFee);
+        inRecord.balance = (inRecord.balance).bsub(_safuFee);
+
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut);
         return (tokenAmountIn, spotPriceAfter);
     }
@@ -615,7 +620,6 @@ contract XPool is XApollo, XPToken, XConst {
         inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
 
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
-
         _mintPoolShare(poolAmountOut);
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
@@ -625,6 +629,8 @@ contract XPool is XApollo, XPToken, XConst {
             _safuFee = tokenAmountIn.bmul(swapFee);
         }
         _pushUnderlying(tokenIn, SAFU, _safuFee);
+        inRecord.balance = (inRecord.balance).bsub(_safuFee);
+
         _pushPoolShare(msg.sender, poolAmountOut);
         return poolAmountOut;
     }
