@@ -274,6 +274,21 @@ contract XConfig is XConst {
         }
     }
 
+    // update isFarmPool status in pools
+    function updateFarm(address[] calldata pools, bool isFarm)
+        external
+        onlyCore
+    {
+        require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            require(Address.isContract(pools[i]), "ERR_NOT_CONTRACT");
+
+            IXPool pool = IXPool(pools[i]);
+            pool.updateFarm(isFarm);
+        }
+    }
+
     function collect(address token, address to) external onlyCore {
         IERC20 TI = IERC20(token);
 

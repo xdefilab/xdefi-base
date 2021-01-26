@@ -128,5 +128,8 @@ interface IXPool {
         uint256 minAmountOut
     ) external returns (uint256 tokenAmountOut);
 
+    // Pool Governance
     function updateSafu(address safu, uint256 fee) external;
+
+    function updateFarm(bool isFarm) external;
 }
