@@ -219,7 +219,7 @@ contract XPool is XApollo, XPToken, XConst {
         require(decimal >= 10**6, "ERR_TOO_SMALL");
 
         // 0.000001 TOKEN
-        require(balance >= decimal / MIN_BALANCE, "ERR_MIN_AMOUNT");
+        require(balance >= decimal / MIN_BALANCE, "ERR_MIN_BALANCE");
 
         _totalWeight = _totalWeight.badd(denorm);
         require(_totalWeight <= MAX_TOTAL_WEIGHT, "ERR_MAX_TOTAL_WEIGHT");
@@ -247,7 +247,7 @@ contract XPool is XApollo, XPToken, XConst {
 
         bool found = false;
         for (uint256 i = 0; i < SWAP_FEES.length; i++) {
-            if (swapFee == SWAP_FEES[i]) {
+            if (_swapFee == SWAP_FEES[i]) {
                 found = true;
                 break;
             }
