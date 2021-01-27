@@ -7,6 +7,11 @@ import "./lib/Address.sol";
 import "./lib/SafeERC20.sol";
 import "./lib/XNum.sol";
 
+/**
+1. SAFU is a multi-sig account
+2. SAFU is the core of XConfig contract instance
+3. DEV firstly deploys XConfig contract, then setups the xconfig.core and xconfig.safu to SAFU with setSAFU() and setCore() 
+*/
 contract XConfig is XConst {
     using XNum for uint256;
     using Address for address;
@@ -29,7 +34,7 @@ contract XConfig is XConst {
     // Check Farm Pool
     mapping(address => bool) internal farmPools;
 
-    // sorted pool sigs
+    // sorted pool sigs for pool deduplication
     // key: keccak256(tokens[i], norms[i]), value: pool_exists
     mapping(bytes32 => bool) internal poolSigs;
     uint256 public poolSigCount;
@@ -38,8 +43,8 @@ contract XConfig is XConst {
 
     event INIT_SAFU(address indexed addr);
     event SET_CORE(address indexed core, address indexed coreNew);
-    event SET_SAFU(address indexed safu, address indexed safuNew);
 
+    event SET_SAFU(address indexed safu, address indexed safuNew);
     event SET_SAFU_FEE(uint256 indexed fee, uint256 indexed feeNew);
 
     event ADD_POOL_SIG(address indexed caller, bytes32 sig);
