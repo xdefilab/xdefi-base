@@ -275,6 +275,7 @@ contract('XPool', async (accounts) => {
             assert.equal(5, fromWei(weth_denorm));
             assert.equal(5, fromWei(mkr_denorm));
             assert.equal(5, fromWei(dai_denorm));
+            assert.equal(1, fromWei(totalWeight));
         });
     });
 

@@ -17,3 +17,5 @@ sleep 1s
 truffle test test/pool.js --network development
 
 sleep 1s
+
+truffle test test/math_with_fees.js --network development
