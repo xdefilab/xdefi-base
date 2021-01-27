@@ -3,6 +3,7 @@ const { address } = require('./utils/Ethereum');
 const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
+const swapFee = 10 ** -1; // 0.001;
 
 contract('XPool', async (accounts) => {
     const admin = accounts[0];
@@ -75,36 +76,37 @@ contract('XPool', async (accounts) => {
         });
 
         it('Admin binds tokens', async () => {
-            await pool.bind(AAA, toWei('50'), toWei('1'));
-            await pool.bind(BBB, toWei('50'), toWei('3'));
-            await pool.bind(CCC, toWei('50'), toWei('2.5'));
-            await pool.bind(DDD, toWei('50'), toWei('7'));
-            await pool.bind(EEE, toWei('50'), toWei('10'));
-            await pool.bind(FFF, toWei('50'), toWei('1.99'));
-            await pool.bind(GGG, toWei('40'), toWei('6'));
-            await pool.bind(HHH, toWei('70'), toWei('2.3'));
+            await aaa.transfer(POOL, toWei('50'));
+            await pool.bind(AAA, toWei('1'));
 
-            const totalDernomWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(33.79, fromWei(totalDernomWeight));
-        });
+            await bbb.transfer(POOL, toWei('50'));
+            await pool.bind(BBB, toWei('3'));
 
-        it('Fails binding more than 8 tokens', async () => {
-            await truffleAssert.reverts(pool.bind(ZZZ, toWei('50'), toWei('2')), 'ERR_MAX_TOKENS');
-        });
+            await ccc.transfer(POOL, toWei('50'));
+            await pool.bind(CCC, toWei('2.5'));
 
-        it('Rebind token at a smaller balance', async () => {
-            await pool.rebind(HHH, toWei('50'), toWei('2.1'));
-            const balance = await pool.getBalance(HHH);
-            assert.equal(fromWei(balance), 50);
+            await ddd.transfer(POOL, toWei('50'));
+            await pool.bind(DDD, toWei('7'));
 
-            const adminBalance = await hhh.balanceOf(admin);
-            assert.equal(fromWei(adminBalance), 50);
+            await eee.transfer(POOL, toWei('50'));
+            await pool.bind(EEE, toWei('10'));
 
-            const factoryBalance = await hhh.balanceOf(FACTORY);
-            assert.equal(fromWei(factoryBalance), 0);
+            await fff.transfer(POOL, toWei('50'));
+            await pool.bind(FFF, toWei('1.99'));
+
+            await ggg.transfer(POOL, toWei('40'));
+            await pool.bind(GGG, toWei('6'));
+
+            await hhh.transfer(POOL, toWei('50'));
+            await pool.bind(HHH, toWei('2.1'));
 
             const totalDernomWeight = await pool.getTotalDenormalizedWeight();
             assert.equal(33.59, fromWei(totalDernomWeight));
+        });
+
+        it('Fails binding more than 8 tokens', async () => {
+            await zzz.transfer(POOL, toWei('50'));
+            await truffleAssert.reverts(pool.bind(ZZZ, toWei('2')), 'ERR_MAX_TOKENS');
         });
 
         it('Fails gulp on unbound token', async () => {
@@ -120,15 +122,15 @@ contract('XPool', async (accounts) => {
         });
 
         it('Fails swapExactAmountIn with limits', async () => {
-            await pool.setPublicSwap(true);
+            await pool.finalize(toWei(String(swapFee)));// 0.1%;
+
             await truffleAssert.reverts(
                 pool.swapExactAmountIn(
                     AAA,
                     toWei('1'),
                     BBB,
                     toWei('0'),
-                    toWei('0.9'),
-                    address(0)
+                    toWei('0.9')
                 ),
                 'ERR_BAD_LIMIT_PRICE',
             );
@@ -138,8 +140,7 @@ contract('XPool', async (accounts) => {
                     toWei('1'),
                     BBB,
                     toWei('2'),
-                    toWei('3.5'),
-                    address(0)
+                    toWei('3.5')
                 ),
                 'ERR_LIMIT_OUT',
             );
@@ -149,8 +150,7 @@ contract('XPool', async (accounts) => {
                     toWei('1'),
                     BBB,
                     toWei('0'),
-                    toWei('3.00001'),
-                    address(0)
+                    toWei('3.00001')
                 ),
                 'ERR_BAD_LIMIT_PRICE',
             );
@@ -163,8 +163,7 @@ contract('XPool', async (accounts) => {
                     toWei('51'),
                     BBB,
                     toWei('40'),
-                    toWei('5'),
-                    address(0)
+                    toWei('5')
                 ),
                 'ERR_MAX_OUT_RATIO',
             );
@@ -174,8 +173,7 @@ contract('XPool', async (accounts) => {
                     toWei('5'),
                     BBB,
                     toWei('1'),
-                    toWei('1'),
-                    address(0)
+                    toWei('1')
                 ),
                 'ERR_BAD_LIMIT_PRICE',
             );
@@ -185,8 +183,7 @@ contract('XPool', async (accounts) => {
                     toWei('1'),
                     BBB,
                     toWei('1'),
-                    toWei('5'),
-                    address(0)
+                    toWei('5')
                 ),
                 'ERR_LIMIT_IN',
             );
@@ -196,8 +193,7 @@ contract('XPool', async (accounts) => {
                     toWei('5'),
                     BBB,
                     toWei('1'),
-                    toWei('3.00001'),
-                    address(0)
+                    toWei('3.00001')
                 ),
                 'ERR_BAD_LIMIT_PRICE',
             );

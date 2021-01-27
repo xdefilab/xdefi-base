@@ -1,7 +1,6 @@
 pragma solidity 0.5.17;
 
-// Test Token
-
+// Test Toke
 contract TToken {
     string private _name;
     string private _symbol;
