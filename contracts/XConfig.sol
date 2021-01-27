@@ -7,11 +7,6 @@ import "./lib/Address.sol";
 import "./lib/SafeERC20.sol";
 import "./lib/XNum.sol";
 
-// https://github.com/xdefilab/xdefi-governance-token/blob/master/contracts/XDEX.sol
-interface IXDEX {
-    function burnForSelf(uint256 amount) external;
-}
-
 contract XConfig is XConst {
     using XNum for uint256;
     using Address for address;
@@ -181,6 +176,7 @@ contract XConfig is XConst {
         return farmPools[pool];
     }
 
+    //list farm pool
     function addFarmPool(address pool) external onlyCore {
         require(pool != address(0), "ERR_ZERO_ADDR");
         require(!farmPools[pool], "ERR_IS_FARMPOOL");
@@ -189,77 +185,13 @@ contract XConfig is XConst {
         emit ADD_FARM_POOL(pool);
     }
 
+    //delist farm pool
     function removeFarmPool(address pool) external onlyCore {
         require(pool != address(0), "ERR_ZERO_ADDR");
         require(farmPools[pool], "ERR_NOT_FARMPOOL");
         farmPools[pool] = false;
 
         emit RM_FARM_POOL(pool);
-    }
-
-    // swap any token in SAFU to XDEX
-    function convert(
-        address pool,
-        address tokenIn,
-        uint256 tokenAmountIn,
-        uint256 maxPrice
-    )
-        external
-        onlyCore
-        returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
-    {
-        require(msg.sender == tx.origin, "ERR_FROM_CONTRACT");
-
-        IXPool xpool = IXPool(pool);
-        require(xpool.isBound(tokenIn) && xpool.isBound(XDEX), "ERR_NOT_BOUND");
-
-        //safe approve
-        IERC20 TI = IERC20(tokenIn);
-        if (TI.allowance(address(this), pool) > 0) {
-            TI.safeApprove(pool, 0);
-        }
-        TI.safeApprove(pool, tokenAmountIn);
-
-        //swap
-        return
-            xpool.swapExactAmountIn(tokenIn, tokenAmountIn, XDEX, 0, maxPrice);
-    }
-
-    // add SAFU's assets as liquidity to any pool, such as WETH-DAI-XDEX
-    function joinPool(
-        address pool,
-        uint256 poolAmountOut,
-        uint256[] calldata maxAmountsIn
-    ) external onlyCore {
-        require(Address.isContract(pool), "ERR_NOT_CONTRACT");
-        IXPool xpool = IXPool(pool);
-
-        //safe approve to maxAmountsIn
-        address[] memory tokens = xpool.getFinalTokens();
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20 TI = IERC20(tokens[i]);
-            if (TI.allowance(address(this), pool) > 0) {
-                TI.safeApprove(pool, 0);
-            }
-            TI.safeApprove(pool, maxAmountsIn[i]);
-        }
-
-        xpool.joinPool(poolAmountOut, maxAmountsIn);
-    }
-
-    // remove SAFU's liquidity from any pool
-    function exitPool(
-        address pool,
-        uint256 poolAmountIn,
-        uint256[] calldata minAmountsOut
-    ) external onlyCore {
-        require(Address.isContract(pool), "ERR_NOT_CONTRACT");
-        IXPool(pool).exitPool(poolAmountIn, minAmountsOut);
-    }
-
-    // burn xdex
-    function burnForSelf(uint256 amount) external onlyCore {
-        IXDEX(XDEX).burnForSelf(amount);
     }
 
     // update SAFU address and SAFE_FEE to pools
@@ -274,7 +206,7 @@ contract XConfig is XConst {
         }
     }
 
-    // update isFarmPool status in pools
+    // update isFarmPool status to pools
     function updateFarm(address[] calldata pools, bool isFarm)
         external
         onlyCore
@@ -289,11 +221,12 @@ contract XConfig is XConst {
         }
     }
 
-    function collect(address token, address to) external onlyCore {
+    // collect any tokens in this contract to safu
+    function collect(address token) external onlyCore {
         IERC20 TI = IERC20(token);
 
         uint256 collected = TI.balanceOf(address(this));
-        TI.safeTransfer(to, collected);
+        TI.safeTransfer(safu, collected);
 
         emit COLLECT(token, collected);
     }

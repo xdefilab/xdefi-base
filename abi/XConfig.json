@@ -2,161 +2,6 @@
     "contractName": "XConfig",
     "abi": [
         {
-            "inputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "constructor"
-        },
-        {
-            "anonymous": false,
-            "inputs": [
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "addr",
-                    "type": "address"
-                }
-            ],
-            "name": "INIT_SAFU",
-            "type": "event"
-        },
-        {
-            "anonymous": false,
-            "inputs": [
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "core",
-                    "type": "address"
-                },
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "coreNew",
-                    "type": "address"
-                }
-            ],
-            "name": "SET_CORE",
-            "type": "event"
-        },
-        {
-            "anonymous": false,
-            "inputs": [
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "farmPoolCreator",
-                    "type": "address"
-                },
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "creatorNew",
-                    "type": "address"
-                }
-            ],
-            "name": "SET_FARM_CREATOR",
-            "type": "event"
-        },
-        {
-            "anonymous": false,
-            "inputs": [
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "safu",
-                    "type": "address"
-                },
-                {
-                    "indexed": true,
-                    "internalType": "address",
-                    "name": "safuNew",
-                    "type": "address"
-                }
-            ],
-            "name": "SET_SAFU",
-            "type": "event"
-        },
-        {
-            "anonymous": false,
-            "inputs": [
-                {
-                    "indexed": true,
-                    "internalType": "uint256",
-                    "name": "fee",
-                    "type": "uint256"
-                },
-                {
-                    "indexed": true,
-                    "internalType": "uint256",
-                    "name": "feeNew",
-                    "type": "uint256"
-                }
-            ],
-            "name": "SET_SAFU_FEE",
-            "type": "event"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "BONE",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "SAFU_FEE",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "XDEX",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "maxExitFee",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
             "constant": true,
             "inputs": [],
             "name": "getCore",
@@ -188,13 +33,19 @@
         },
         {
             "constant": true,
-            "inputs": [],
-            "name": "getFarmCreator",
-            "outputs": [
+            "inputs": [
                 {
                     "internalType": "address",
-                    "name": "",
+                    "name": "pool",
                     "type": "address"
+                }
+            ],
+            "name": "isFarmPool",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
                 }
             ],
             "payable": false,
@@ -234,6 +85,21 @@
         {
             "constant": true,
             "inputs": [],
+            "name": "getSwapProxy",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
             "name": "ethAddress",
             "outputs": [
                 {
@@ -262,117 +128,62 @@
             "type": "function"
         },
         {
-            "constant": false,
+            "constant": true,
             "inputs": [
                 {
-                    "internalType": "address",
-                    "name": "_core",
-                    "type": "address"
-                }
-            ],
-            "name": "setCore",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "_safu",
-                    "type": "address"
-                }
-            ],
-            "name": "setSAFU",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "_user",
-                    "type": "address"
-                }
-            ],
-            "name": "setFarmCreator",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "_fee",
-                    "type": "uint256"
-                }
-            ],
-            "name": "setMaxExitFee",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "_fee",
-                    "type": "uint256"
-                }
-            ],
-            "name": "setSafuFee",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "pool",
-                    "type": "address"
+                    "internalType": "address[]",
+                    "name": "tokens",
+                    "type": "address[]"
                 },
                 {
-                    "internalType": "address",
-                    "name": "tokenIn",
-                    "type": "address"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "tokenAmountIn",
-                    "type": "uint256"
-                },
-                {
-                    "internalType": "uint256",
-                    "name": "maxPrice",
-                    "type": "uint256"
+                    "internalType": "uint256[]",
+                    "name": "denorms",
+                    "type": "uint256[]"
                 }
             ],
-            "name": "convert",
+            "name": "hasPool",
             "outputs": [
                 {
-                    "internalType": "uint256",
-                    "name": "tokenAmountOut",
-                    "type": "uint256"
+                    "internalType": "bool",
+                    "name": "exist",
+                    "type": "bool"
                 },
                 {
-                    "internalType": "uint256",
-                    "name": "spotPriceAfter",
-                    "type": "uint256"
+                    "internalType": "bytes32",
+                    "name": "sig",
+                    "type": "bytes32"
                 }
             ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "sig",
+                    "type": "bytes32"
+                }
+            ],
+            "name": "addPoolSig",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "sig",
+                    "type": "bytes32"
+                }
+            ],
+            "name": "removePoolSig",
+            "outputs": [],
             "payable": false,
             "stateMutability": "nonpayable",
             "type": "function"
