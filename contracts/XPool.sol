@@ -611,8 +611,16 @@ contract XPool is XApollo, XPToken, XConst {
             "ERR_MAX_IN_RATIO"
         );
 
-        Record storage inRecord = _records[tokenIn];
+        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
+        // to SAFU
+        uint256 _safuFee = tokenAmountIn.bmul(safuFee);
+        if (isFarmPool) {
+            _safuFee = tokenAmountIn.bmul(swapFee);
+        }
+        tokenAmountIn = tokenAmountIn.bsub(_safuFee);
+
+        Record storage inRecord = _records[tokenIn];
         poolAmountOut = XMath.calcPoolOutGivenSingleIn(
             inRecord.balance,
             inRecord.denorm,
@@ -621,23 +629,13 @@ contract XPool is XApollo, XPToken, XConst {
             tokenAmountIn,
             swapFee
         );
-
         require(poolAmountOut >= minPoolAmountOut, "ERR_LIMIT_OUT");
 
         inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
 
+        _pushUnderlying(tokenIn, SAFU, _safuFee);
         emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
         _mintPoolShare(poolAmountOut);
-        _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
-
-        // to SAFU
-        uint256 _safuFee = tokenAmountIn.bmul(safuFee);
-        if (isFarmPool) {
-            _safuFee = tokenAmountIn.bmul(swapFee);
-        }
-        _pushUnderlying(tokenIn, SAFU, _safuFee);
-        inRecord.balance = (inRecord.balance).bsub(_safuFee);
-
         _pushPoolShare(msg.sender, poolAmountOut);
         return poolAmountOut;
     }
@@ -649,12 +647,20 @@ contract XPool is XApollo, XPToken, XConst {
     ) external _logs_ _lock_ returns (uint256 tokenAmountOut) {
         require(finalized, "ERR_NOT_FINALIZED");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
-
-        // min pool amount
         require(poolAmountIn >= MIN_POOL_AMOUNT, "ERR_MIN_AMOUNT");
 
-        Record storage outRecord = _records[tokenOut];
+        _pullPoolShare(msg.sender, poolAmountIn);
 
+        // exit fee to origin
+        if (exitFee > 0) {
+            uint256 _exitFee = poolAmountIn.bmul(exitFee);
+            _pushPoolShare(origin, _exitFee);
+            poolAmountIn = poolAmountIn.bsub(_exitFee);
+        }
+
+        _burnPoolShare(poolAmountIn);
+
+        Record storage outRecord = _records[tokenOut];
         tokenAmountOut = XMath.calcSingleOutGivenPoolIn(
             outRecord.balance,
             outRecord.denorm,
@@ -665,7 +671,6 @@ contract XPool is XApollo, XPToken, XConst {
         );
 
         require(tokenAmountOut >= minAmountOut, "ERR_LIMIT_OUT");
-
         require(
             tokenAmountOut <= (_records[tokenOut].balance).bmul(MAX_OUT_RATIO),
             "ERR_MAX_OUT_RATIO"
@@ -673,21 +678,13 @@ contract XPool is XApollo, XPToken, XConst {
 
         outRecord.balance = (outRecord.balance).bsub(tokenAmountOut);
 
-        // to origin
-        uint256 _exitFee = poolAmountIn.bmul(exitFee);
-        emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
-
-        _pullPoolShare(msg.sender, poolAmountIn);
-        _burnPoolShare(poolAmountIn.bsub(_exitFee));
-        if (_exitFee > 0) {
-            _pushPoolShare(origin, _exitFee);
-        }
-
         // to SAFU
         uint256 _safuFee = tokenAmountOut.bmul(safuFee);
         if (isFarmPool) {
             _safuFee = tokenAmountOut.bmul(swapFee);
         }
+
+        emit LOG_EXIT(msg.sender, tokenOut, tokenAmountOut);
         _pushUnderlying(tokenOut, SAFU, _safuFee);
         _pushUnderlying(tokenOut, msg.sender, tokenAmountOut.bsub(_safuFee));
         return tokenAmountOut;
