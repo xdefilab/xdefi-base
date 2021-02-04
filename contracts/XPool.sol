@@ -481,6 +481,7 @@ contract XPool is XApollo, XPToken, XConst {
         if (isFarmPool) {
             _safuFee = _swapFee.bsub(referFee);
         }
+        require(_safuFee.badd(referFee) <= _swapFee, "ERR_FEE_LIMIT");
         _pushUnderlying(tokenIn, SAFU, _safuFee);
         inRecord.balance = (inRecord.balance).bsub(_safuFee);
 
