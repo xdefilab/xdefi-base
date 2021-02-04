@@ -19,11 +19,6 @@ contract XConfig is XConst {
 
     address private core;
 
-    // XDEX Token!
-    address public constant XDEX =
-        address(0xaDBc525ace6ed9c5195071f29036e7ecCd1DC158); // kovan
-    // mainnet
-
     // Secure Asset Fund for Users(SAFU) address
     address private safu;
     uint256 public SAFU_FEE = (5 * BONE) / 10000; // 0.05%
@@ -92,10 +87,6 @@ contract XConfig is XConst {
      */
     function ethAddress() external pure returns (address) {
         return address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-    }
-
-    function XDEXAddress() external pure returns (address) {
-        return XDEX;
     }
 
     // check pool existence which has the same tokens(sorted by address) and weights
