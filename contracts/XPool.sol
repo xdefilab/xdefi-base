@@ -739,7 +739,7 @@ contract XPool is XApollo, XPToken, XConst {
     ) internal {
         // bytes4(keccak256(bytes('transferFrom(address,address,uint256)')));
         (bool success, bytes memory data) =
-            erc20.call(
+            erc20.call.gas(9100)(
                 abi.encodeWithSelector(0x23b872dd, from, address(this), amount)
             );
         require(
@@ -755,7 +755,9 @@ contract XPool is XApollo, XPToken, XConst {
     ) internal {
         // bytes4(keccak256(bytes('transfer(address,uint256)')));
         (bool success, bytes memory data) =
-            erc20.call(abi.encodeWithSelector(0xa9059cbb, to, amount));
+            erc20.call.gas(9100)(
+                abi.encodeWithSelector(0xa9059cbb, to, amount)
+            );
         require(
             success && (data.length == 0 || abi.decode(data, (bool))),
             "ERC20_TRANSFER_FAILED"
