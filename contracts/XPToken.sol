@@ -43,9 +43,9 @@ contract XTokenBase {
 contract XPToken is XTokenBase, IERC20, XApollo {
     using XNum for uint256;
 
-    string private _name = "XDeFi Pool Token";
-    string private _symbol = "XPT";
-    uint8 private _decimals = 18;
+    string private constant _name = "XDeFi Pool Token";
+    string private constant _symbol = "XPT";
+    uint8 private constant _decimals = 18;
 
     function name() public view returns (string memory) {
         return _name;
