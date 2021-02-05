@@ -42,6 +42,8 @@ contract XConfig is XConst {
     event SET_SAFU(address indexed safu, address indexed safuNew);
     event SET_SAFU_FEE(uint256 indexed fee, uint256 indexed feeNew);
 
+    event SET_PROXY(address indexed proxy, address indexed proxyNew);
+
     event ADD_POOL_SIG(address indexed caller, bytes32 sig);
     event RM_POOL_SIG(address indexed caller, bytes32 sig);
 
@@ -143,6 +145,7 @@ contract XConfig is XConst {
 
     function setSwapProxy(address _proxy) external onlyCore {
         require(_proxy != address(0), "ERR_ZERO_ADDR");
+        emit SET_PROXY(swapProxy, _proxy);
         swapProxy = _proxy;
     }
 
