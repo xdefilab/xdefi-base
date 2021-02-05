@@ -533,7 +533,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         }
         if (address(token) == xconfig.ethAddress()) {
             weth.withdraw(amount);
-            (bool xfer, ) = msg.sender.call.value(amount)("");
+            (bool xfer, ) = msg.sender.call.value(amount).gas(9100)("");
             require(xfer, "ERR_ETH_FAILED");
         } else {
             token.safeTransfer(msg.sender, amount);

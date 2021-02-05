@@ -64,9 +64,9 @@ library XMath {
     ) public pure returns (uint256 tokenAmountOut) {
         uint256 weightRatio;
         if (tokenWeightIn == tokenWeightOut) {
-            weightRatio = 1;
+            weightRatio = 1 * BONE;
         } else if (tokenWeightIn >> 1 == tokenWeightOut) {
-            weightRatio = 2;
+            weightRatio = 2 * BONE;
         } else {
             weightRatio = tokenWeightIn.bdiv(tokenWeightOut);
         }
@@ -106,9 +106,9 @@ library XMath {
     ) public pure returns (uint256 tokenAmountIn) {
         uint256 weightRatio;
         if (tokenWeightOut == tokenWeightIn) {
-            weightRatio = 1;
+            weightRatio = 1 * BONE;
         } else if (tokenWeightOut >> 1 == tokenWeightIn) {
-            weightRatio = 2;
+            weightRatio = 2 * BONE;
         } else {
             weightRatio = tokenWeightOut.bdiv(tokenWeightIn);
         }

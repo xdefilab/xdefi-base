@@ -43,27 +43,31 @@ contract XTokenBase {
 contract XPToken is XTokenBase, IERC20, XApollo {
     using XNum for uint256;
 
-    string private _name = "XDeFi Pool Token";
-    string private _symbol = "XPT";
-    uint8 private _decimals = 18;
+    string private constant _name = "XDeFi Pool Token";
+    string private constant _symbol = "XPT";
+    uint8 private constant _decimals = 18;
 
-    function name() public view returns (string memory) {
+    function name() external view returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() external view returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() external view returns (uint8) {
         return _decimals;
     }
 
-    function allowance(address src, address dst) public view returns (uint256) {
+    function allowance(address src, address dst)
+        external
+        view
+        returns (uint256)
+    {
         return _allowance[src][dst];
     }
 
-    function balanceOf(address whom) public view returns (uint256) {
+    function balanceOf(address whom) external view returns (uint256) {
         return _balance[whom];
     }
 
@@ -71,13 +75,13 @@ contract XPToken is XTokenBase, IERC20, XApollo {
         return _totalSupply;
     }
 
-    function approve(address dst, uint256 amt) public returns (bool) {
+    function approve(address dst, uint256 amt) external returns (bool) {
         _allowance[msg.sender][dst] = amt;
         emit Approval(msg.sender, dst, amt);
         return true;
     }
 
-    function transfer(address dst, uint256 amt) public returns (bool) {
+    function transfer(address dst, uint256 amt) external returns (bool) {
         _move(msg.sender, dst, amt);
         return true;
     }
@@ -86,7 +90,7 @@ contract XPToken is XTokenBase, IERC20, XApollo {
         address src,
         address dst,
         uint256 amt
-    ) public returns (bool) {
+    ) external returns (bool) {
         require(
             msg.sender == src || amt <= _allowance[src][msg.sender],
             "ERR_BTOKEN_BAD_CALLER"

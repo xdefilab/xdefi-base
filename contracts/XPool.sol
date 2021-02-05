@@ -464,23 +464,24 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 _swapFee = tokenAmountIn.bmul(swapFee);
 
         // to referral
-        uint256 referFee = 0;
+        uint256 _referFee = 0;
         if (
             referrer != address(0) &&
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = _swapFee / 5; // 20% to referrer
-            _pushUnderlying(tokenIn, referrer, referFee);
-            inRecord.balance = (inRecord.balance).bsub(referFee);
-            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
+            _referFee = _swapFee / 5; // 20% to referrer
+            _pushUnderlying(tokenIn, referrer, _referFee);
+            inRecord.balance = (inRecord.balance).bsub(_referFee);
+            emit LOG_REFER(msg.sender, referrer, tokenIn, _referFee);
         }
 
         // to SAFU
         uint256 _safuFee = tokenAmountIn.bmul(safuFee);
         if (isFarmPool) {
-            _safuFee = _swapFee.bsub(referFee);
+            _safuFee = _swapFee.bsub(_referFee);
         }
+        require(_safuFee.badd(_referFee) <= _swapFee, "ERR_FEE_LIMIT");
         _pushUnderlying(tokenIn, SAFU, _safuFee);
         inRecord.balance = (inRecord.balance).bsub(_safuFee);
 
@@ -575,23 +576,24 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 _swapFee = tokenAmountIn.bmul(swapFee);
         // to referral
-        uint256 referFee = 0;
+        uint256 _referFee = 0;
         if (
             referrer != address(0) &&
             referrer != msg.sender &&
             referrer != tx.origin
         ) {
-            referFee = _swapFee / 5; // 20% to referrer
-            _pushUnderlying(tokenIn, referrer, referFee);
-            inRecord.balance = (inRecord.balance).bsub(referFee);
-            emit LOG_REFER(msg.sender, referrer, tokenIn, referFee);
+            _referFee = _swapFee / 5; // 20% to referrer
+            _pushUnderlying(tokenIn, referrer, _referFee);
+            inRecord.balance = (inRecord.balance).bsub(_referFee);
+            emit LOG_REFER(msg.sender, referrer, tokenIn, _referFee);
         }
 
         // to SAFU
         uint256 _safuFee = tokenAmountIn.bmul(safuFee);
         if (isFarmPool) {
-            _safuFee = _swapFee.bsub(referFee);
+            _safuFee = _swapFee.bsub(_referFee);
         }
+        require(_safuFee.badd(_referFee) <= _swapFee, "ERR_FEE_LIMIT");
         _pushUnderlying(tokenIn, SAFU, _safuFee);
         inRecord.balance = (inRecord.balance).bsub(_safuFee);
 
