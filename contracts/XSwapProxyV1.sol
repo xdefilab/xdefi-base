@@ -314,7 +314,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         for (uint256 i = 0; i < swapSequences.length; i++) {
             require(tokenIn == swapSequences[i][0].tokenIn, "ERR_NOT_MATCH");
 
-            uint256 tokenAmountInFirstSwap;
+            uint256 tokenAmountInFirstSwap = 0;
             // Specific code for a simple swap and a multihop (2 swaps in sequence)
             if (swapSequences[i].length == 1) {
                 MSwap memory swap = swapSequences[i][0];
@@ -354,7 +354,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     poolSecondSwap.swapFee()
                 );
 
-                //// Buy intermediateTokenAmount of token B with A in the first pool
+                // Buy intermediateTokenAmount of token B with A in the first pool
                 MSwap memory firstSwap = swapSequences[i][0];
                 IERC20 FirstSwapTokenIn = IERC20(firstSwap.tokenIn);
                 IXPool poolFirstSwap = IXPool(firstSwap.pool);
@@ -374,7 +374,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     firstSwap.maxPrice
                 );
 
-                //// Buy the final amount of token C desired
+                // Buy the final amount of token C desired
                 IERC20 SecondSwapTokenIn = IERC20(secondSwap.tokenIn);
                 if (
                     SecondSwapTokenIn.allowance(

@@ -27,7 +27,7 @@ contract XConfig is XConst {
     address private swapProxy;
 
     // Check Farm Pool
-    mapping(address => bool) internal farmPools;
+    //mapping(address => bool) internal farmPools;
 
     // sorted pool sigs for pool deduplication
     // key: keccak256(tokens[i], norms[i]), value: pool_exists
@@ -128,6 +128,7 @@ contract XConfig is XConst {
     }
 
     function setSAFU(address _safu) external onlyCore {
+        require(_safu != address(0), "ERR_ZERO_ADDR");
         emit SET_SAFU(safu, _safu);
         safu = _safu;
     }
@@ -171,28 +172,6 @@ contract XConfig is XConst {
         emit RM_POOL_SIG(msg.sender, sig);
     }
 
-    function isFarmPool(address pool) external view returns (bool) {
-        return farmPools[pool];
-    }
-
-    //list farm pool
-    function addFarmPool(address pool) external onlyCore {
-        require(pool != address(0), "ERR_ZERO_ADDR");
-        require(!farmPools[pool], "ERR_IS_FARMPOOL");
-        farmPools[pool] = true;
-
-        emit ADD_FARM_POOL(pool);
-    }
-
-    //delist farm pool
-    function removeFarmPool(address pool) external onlyCore {
-        require(pool != address(0), "ERR_ZERO_ADDR");
-        require(farmPools[pool], "ERR_NOT_FARMPOOL");
-        farmPools[pool] = false;
-
-        emit RM_FARM_POOL(pool);
-    }
-
     // update SAFU address and SAFE_FEE to pools
     function updateSafu(address[] calldata pools) external onlyCore {
         require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
@@ -217,6 +196,12 @@ contract XConfig is XConst {
 
             IXPool pool = IXPool(pools[i]);
             pool.updateFarm(isFarm);
+
+            if (isFarm) {
+                emit ADD_FARM_POOL(pools[i]);
+            } else {
+                emit RM_FARM_POOL(pools[i]);
+            }
         }
     }
 

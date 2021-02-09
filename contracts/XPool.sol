@@ -66,6 +66,10 @@ contract XPool is XApollo, XPToken, XConst {
 
     event LOG_FINAL(uint256 swapFee);
 
+    event SET_CONTROLLER(address indexed manager);
+
+    event UPDATE_FARM(address indexed caller, bool isFarm);
+
     // anonymous event
     event LOG_CALL(
         bytes4 indexed sig,
@@ -183,7 +187,9 @@ contract XPool is XApollo, XPToken, XConst {
 
     function setController(address manager) external _logs_ {
         require(msg.sender == controller, "ERR_NOT_CONTROLLER");
+        require(manager != address(0), "ERR_ZERO_ADDR");
         controller = manager;
+        emit SET_CONTROLLER(manager);
     }
 
     function setExitFee(uint256 fee) external {
@@ -208,6 +214,7 @@ contract XPool is XApollo, XPToken, XConst {
     function updateFarm(bool isFarm) external {
         require(msg.sender == address(xconfig), "ERR_NOT_CONFIG");
         isFarmPool = isFarm;
+        emit UPDATE_FARM(msg.sender, isFarm);
     }
 
     function bind(address token, uint256 denorm) external _lock_ {

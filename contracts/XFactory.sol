@@ -26,6 +26,7 @@ contract XFactory is XApollo {
     constructor(address _config, address _creator) public {
         xconfig = IXConfig(_config);
         xcreator = IXPoolCreator(_creator);
+        emit SET_XPOOL_CREATOR(address(0), _creator);
     }
 
     function isPool(address b) external view returns (bool) {
