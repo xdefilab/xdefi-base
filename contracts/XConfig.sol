@@ -1,73 +1,56 @@
 pragma solidity 0.5.17;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./interface/IXPool.sol";
 import "./XConst.sol";
+import "./interface/IXPool.sol";
+import "./interface/IERC20.sol";
+import "./lib/Address.sol";
+import "./lib/SafeERC20.sol";
+import "./lib/XNum.sol";
 
-// https://github.com/xdefilab/xdefi-governance-token/blob/master/contracts/XDEX.sol
-interface IXDEX {
-    function burnForSelf(uint256 amount) external;
-}
-
-// https://github.com/xdefilab/xdefi-governance-token/blob/master/contracts/FarmMaster.sol
-interface IFarmMaster {
-    // Deposit LP tokens to FarmMaster for XDEX allocation.
-    function deposit(
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external;
-
-    // Withdraw LP tokens from MasterChef.
-    function withdraw(
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external;
-}
-
+/**
+1. SAFU is a multi-sig account
+2. SAFU is the core of XConfig contract instance
+3. DEV firstly deploys XConfig contract, then setups the xconfig.core and xconfig.safu to SAFU with setSAFU() and setCore() 
+*/
 contract XConfig is XConst {
-    using SafeMath for uint256;
+    using XNum for uint256;
     using Address for address;
     using SafeERC20 for IERC20;
 
     address private core;
 
-    // XDEX Token!
-    address public constant XDEX =
-        address(0xaDBc525ace6ed9c5195071f29036e7ecCd1DC158); // kovan
-    // mainnet
-
     // Secure Asset Fund for Users(SAFU) address
     address private safu;
-    uint256 public SAFU_FEE = (5 * BONE) / 10000;
+    uint256 public SAFU_FEE = (5 * BONE) / 10000; // 0.05%
 
     // Swap Proxy Address
     address private swapProxy;
 
     // Check Farm Pool
-    mapping(address => bool) internal farmPools;
+    //mapping(address => bool) internal farmPools;
 
-    // sorted pool sigs
+    // sorted pool sigs for pool deduplication
     // key: keccak256(tokens[i], norms[i]), value: pool_exists
     mapping(bytes32 => bool) internal poolSigs;
+    uint256 public poolSigCount;
 
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
     event INIT_SAFU(address indexed addr);
     event SET_CORE(address indexed core, address indexed coreNew);
-    event SET_SAFU(address indexed safu, address indexed safuNew);
 
+    event SET_SAFU(address indexed safu, address indexed safuNew);
     event SET_SAFU_FEE(uint256 indexed fee, uint256 indexed feeNew);
+
+    event SET_PROXY(address indexed proxy, address indexed proxyNew);
 
     event ADD_POOL_SIG(address indexed caller, bytes32 sig);
     event RM_POOL_SIG(address indexed caller, bytes32 sig);
 
     event ADD_FARM_POOL(address indexed pool);
     event RM_FARM_POOL(address indexed pool);
+
+    event COLLECT(address indexed token, uint256 amount);
 
     modifier onlyCore() {
         require(msg.sender == core, "ERR_CORE_AUTH");
@@ -108,13 +91,10 @@ contract XConfig is XConst {
         return address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     }
 
-    function XDEXAddress() external pure returns (address) {
-        return XDEX;
-    }
-
     // check pool existence which has the same tokens(sorted by address) and weights
-    function hasPool(address[] memory tokens, uint256[] memory denorms)
-        public
+    // the decimals of denorms will allways between [10**18, 50 * 10**18]
+    function hasPool(address[] calldata tokens, uint256[] calldata denorms)
+        external
         view
         returns (bool exist, bytes32 sig)
     {
@@ -124,7 +104,7 @@ contract XConfig is XConst {
 
         uint256 totalWeight = 0;
         for (uint8 i = 0; i < tokens.length; i++) {
-            totalWeight = totalWeight.add(denorms[i]);
+            totalWeight = totalWeight.badd(denorms[i]);
         }
 
         bytes memory poolInfo;
@@ -133,7 +113,7 @@ contract XConfig is XConst {
                 require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
             }
             //normalized weight (multiplied by 100)
-            uint256 nWeight = denorms[i].mul(100).div(totalWeight);
+            uint256 nWeight = denorms[i].bmul(100).bdiv(totalWeight);
             poolInfo = abi.encodePacked(poolInfo, tokens[i], nWeight);
         }
         sig = keccak256(poolInfo);
@@ -148,6 +128,7 @@ contract XConfig is XConst {
     }
 
     function setSAFU(address _safu) external onlyCore {
+        require(_safu != address(0), "ERR_ZERO_ADDR");
         emit SET_SAFU(safu, _safu);
         safu = _safu;
     }
@@ -165,6 +146,7 @@ contract XConfig is XConst {
 
     function setSwapProxy(address _proxy) external onlyCore {
         require(_proxy != address(0), "ERR_ZERO_ADDR");
+        emit SET_PROXY(swapProxy, _proxy);
         swapProxy = _proxy;
     }
 
@@ -174,6 +156,7 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = true;
+        poolSigCount = poolSigCount.badd(1);
 
         emit ADD_POOL_SIG(msg.sender, sig);
     }
@@ -184,122 +167,51 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(sig != 0, "ERR_NOT_SIG");
         poolSigs[sig] = false;
+        poolSigCount = poolSigCount.bsub(1);
 
         emit RM_POOL_SIG(msg.sender, sig);
     }
 
-    function isFarmPool(address pool) external view returns (bool) {
-        return farmPools[pool];
+    // update SAFU address and SAFE_FEE to pools
+    function updateSafu(address[] calldata pools) external onlyCore {
+        require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
+
+        for (uint256 i = 0; i < pools.length; i++) {
+            require(Address.isContract(pools[i]), "ERR_NOT_CONTRACT");
+
+            IXPool pool = IXPool(pools[i]);
+            pool.updateSafu(safu, SAFU_FEE);
+        }
     }
 
-    function addFarmPool(address pool) external onlyCore {
-        require(pool != address(0), "ERR_ZERO_ADDR");
-        require(!farmPools[pool], "ERR_IS_FARMPOOL");
-        farmPools[pool] = true;
-
-        emit ADD_FARM_POOL(pool);
-    }
-
-    function removeFarmPool(address pool) external onlyCore {
-        require(pool != address(0), "ERR_ZERO_ADDR");
-        require(farmPools[pool], "ERR_NOT_FARMPOOL");
-        farmPools[pool] = false;
-
-        emit RM_FARM_POOL(pool);
-    }
-
-    // swap any token in SAFU to XDEX
-    function convert(
-        address pool,
-        address tokenIn,
-        uint256 tokenAmountIn,
-        uint256 maxPrice
-    )
+    // update isFarmPool status to pools
+    function updateFarm(address[] calldata pools, bool isFarm)
         external
         onlyCore
-        returns (uint256 tokenAmountOut, uint256 spotPriceAfter)
     {
-        require(msg.sender == tx.origin, "ERR_FROM_CONTRACT");
+        require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
 
-        IXPool xpool = IXPool(pool);
-        require(xpool.isBound(tokenIn) && xpool.isBound(XDEX), "ERR_NOT_BOUND");
+        for (uint256 i = 0; i < pools.length; i++) {
+            require(Address.isContract(pools[i]), "ERR_NOT_CONTRACT");
 
-        //safe approve
-        IERC20 TI = IERC20(tokenIn);
-        if (TI.allowance(address(this), pool) > 0) {
-            TI.safeApprove(pool, 0);
-        }
-        TI.safeApprove(pool, tokenAmountIn);
+            IXPool pool = IXPool(pools[i]);
+            pool.updateFarm(isFarm);
 
-        //swap
-        return
-            xpool.swapExactAmountIn(tokenIn, tokenAmountIn, XDEX, 0, maxPrice);
-    }
-
-    // add SAFU's assets as liquidity to any pool, such as WETH-DAI-XDEX
-    function joinPool(
-        address pool,
-        uint256 poolAmountOut,
-        uint256[] calldata maxAmountsIn
-    ) external onlyCore {
-        require(Address.isContract(pool), "ERR_NOT_CONTRACT");
-        IXPool xpool = IXPool(pool);
-
-        //safe approve
-        address[] memory tokens = xpool.getFinalTokens();
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20 TI = IERC20(tokens[i]);
-            if (TI.allowance(address(this), pool) > 0) {
-                TI.safeApprove(pool, 0);
+            if (isFarm) {
+                emit ADD_FARM_POOL(pools[i]);
+            } else {
+                emit RM_FARM_POOL(pools[i]);
             }
-            TI.safeApprove(pool, maxAmountsIn[i]);
         }
-
-        xpool.joinPool(poolAmountOut, maxAmountsIn);
     }
 
-    // remove SAFU's liquidity from any pool
-    function exitPool(
-        address pool,
-        uint256 poolAmountIn,
-        uint256[] calldata minAmountsOut
-    ) external onlyCore {
-        require(Address.isContract(pool), "ERR_NOT_CONTRACT");
-        IXPool(pool).exitPool(poolAmountIn, minAmountsOut);
-    }
+    // collect any tokens in this contract to safu
+    function collect(address token) external onlyCore {
+        IERC20 TI = IERC20(token);
 
-    // burn xdex
-    function burnForSelf(uint256 amount) external onlyCore {
-        IXDEX(XDEX).burnForSelf(amount);
-    }
+        uint256 collected = TI.balanceOf(address(this));
+        TI.safeTransfer(safu, collected);
 
-    // deposit lp to farm pool
-    function depositToFarm(
-        address farmMaster,
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external onlyCore {
-        require(Address.isContract(farmMaster), "ERR_NOT_CONTRACT");
-
-        //safe approve
-        if (lpToken.allowance(address(this), farmMaster) > 0) {
-            lpToken.safeApprove(farmMaster, 0);
-        }
-        lpToken.safeApprove(farmMaster, amount);
-
-        IFarmMaster(farmMaster).deposit(pid, lpToken, amount);
-    }
-
-    // withdraw lp from farm pool
-    function withdrawFromFarm(
-        address farmMaster,
-        uint256 pid,
-        IERC20 lpToken,
-        uint256 amount
-    ) external onlyCore {
-        require(Address.isContract(farmMaster), "ERR_NOT_CONTRACT");
-
-        IFarmMaster(farmMaster).withdraw(pid, lpToken, amount);
+        emit COLLECT(token, collected);
     }
 }

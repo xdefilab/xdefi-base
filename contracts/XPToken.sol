@@ -2,7 +2,7 @@ pragma solidity 0.5.17;
 
 import "./XVersion.sol";
 import "./lib/XNum.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./interface/IERC20.sol";
 
 // Highly opinionated token implementation
 contract XTokenBase {
@@ -43,19 +43,19 @@ contract XTokenBase {
 contract XPToken is XTokenBase, IERC20, XApollo {
     using XNum for uint256;
 
-    string private _name = "XDeFi Pool Token";
-    string private _symbol = "XPT";
-    uint8 private _decimals = 18;
+    string private constant _name = "XDeFi Pool Token";
+    string private constant _symbol = "XPT";
+    uint8 private constant _decimals = 18;
 
-    function name() public view returns (string memory) {
+    function name() external view returns (string memory) {
         return _name;
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() external view returns (string memory) {
         return _symbol;
     }
 
-    function decimals() public view returns (uint8) {
+    function decimals() external view returns (uint8) {
         return _decimals;
     }
 

@@ -62,11 +62,25 @@ library XMath {
         uint256 tokenAmountIn,
         uint256 swapFee
     ) public pure returns (uint256 tokenAmountOut) {
-        uint256 weightRatio = tokenWeightIn.bdiv(tokenWeightOut);
+        uint256 weightRatio;
+        if (tokenWeightIn == tokenWeightOut) {
+            weightRatio = 1 * BONE;
+        } else if (tokenWeightIn >> 1 == tokenWeightOut) {
+            weightRatio = 2 * BONE;
+        } else {
+            weightRatio = tokenWeightIn.bdiv(tokenWeightOut);
+        }
         uint256 adjustedIn = BONE.bsub(swapFee);
         adjustedIn = tokenAmountIn.bmul(adjustedIn);
         uint256 y = tokenBalanceIn.bdiv(tokenBalanceIn.badd(adjustedIn));
-        uint256 foo = y.bpow(weightRatio);
+        uint256 foo;
+        if (tokenWeightIn == tokenWeightOut) {
+            foo = y;
+        } else if (tokenWeightIn >> 1 == tokenWeightOut) {
+            foo = y.bmul(y);
+        } else {
+            foo = y.bpow(weightRatio);
+        }
         uint256 bar = BONE.bsub(foo);
         tokenAmountOut = tokenBalanceOut.bmul(bar);
         return tokenAmountOut;
@@ -90,10 +104,24 @@ library XMath {
         uint256 tokenAmountOut,
         uint256 swapFee
     ) public pure returns (uint256 tokenAmountIn) {
-        uint256 weightRatio = tokenWeightOut.bdiv(tokenWeightIn);
+        uint256 weightRatio;
+        if (tokenWeightOut == tokenWeightIn) {
+            weightRatio = 1 * BONE;
+        } else if (tokenWeightOut >> 1 == tokenWeightIn) {
+            weightRatio = 2 * BONE;
+        } else {
+            weightRatio = tokenWeightOut.bdiv(tokenWeightIn);
+        }
         uint256 diff = tokenBalanceOut.bsub(tokenAmountOut);
         uint256 y = tokenBalanceOut.bdiv(diff);
-        uint256 foo = y.bpow(weightRatio);
+        uint256 foo;
+        if (tokenWeightOut == tokenWeightIn) {
+            foo = y;
+        } else if (tokenWeightOut >> 1 == tokenWeightIn) {
+            foo = y.bmul(y);
+        } else {
+            foo = y.bpow(weightRatio);
+        }
         foo = foo.bsub(BONE);
         tokenAmountIn = BONE.bsub(swapFee);
         tokenAmountIn = tokenBalanceIn.bmul(foo).bdiv(tokenAmountIn);
@@ -158,9 +186,8 @@ library XMath {
         uint256 normalizedWeight = tokenWeightOut.bdiv(totalWeight);
         // charge exit fee on the pool token side
         // pAiAfterExitFee = pAi*(1-exitFee)
-        uint256 poolAmountInAfterExitFee = poolAmountIn.bmul(
-            BONE.bsub(EXIT_ZERO_FEE)
-        );
+        uint256 poolAmountInAfterExitFee =
+            poolAmountIn.bmul(BONE.bsub(EXIT_ZERO_FEE));
         uint256 newPoolSupply = poolSupply.bsub(poolAmountInAfterExitFee);
         uint256 poolRatio = newPoolSupply.bdiv(poolSupply);
 
@@ -168,9 +195,8 @@ library XMath {
         uint256 tokenOutRatio = poolRatio.bpow(BONE.bdiv(normalizedWeight));
         uint256 newTokenBalanceOut = tokenOutRatio.bmul(tokenBalanceOut);
 
-        uint256 tokenAmountOutBeforeSwapFee = tokenBalanceOut.bsub(
-            newTokenBalanceOut
-        );
+        uint256 tokenAmountOutBeforeSwapFee =
+            tokenBalanceOut.bsub(newTokenBalanceOut);
 
         // charge swap fee on the output token side
         //uint tAo = tAoBeforeSwapFee * (1 - (1-weightTo) * swapFee)

@@ -1,10 +1,13 @@
 const truffleAssert = require('truffle-assertions');
-const { calcOutGivenIn, calcInGivenOut, calcRelativeDiff } = require('../lib/calc_comparisons');
+const { calcOutGivenIn, calcInGivenOut, calcRelative, calcRelativeDiff } = require('../lib/calc_comparisons');
 const { address } = require('./utils/Ethereum');
 const XPool = artifacts.require('XPool');
 const XFactory = artifacts.require('XFactory');
 const TToken = artifacts.require('TToken');
 const verbose = process.env.VERBOSE;
+const XConfig = artifacts.require('XConfig');
+
+const swapFee = 0.001; // 0.1%;
 
 contract('XPool', async (accounts) => {
     const admin = accounts[0];
@@ -15,17 +18,26 @@ contract('XPool', async (accounts) => {
     const errorDelta = 10 ** -8;
     const MAX = web3.utils.toTwosComplement(-1);
 
-    //address
+    //token address
     let WETH; let MKR; let DAI; let XXX; // addresses
-    let POOL; //   pool address
+    let POOL; // pool address
+    let SAFU; // SAFU address
 
     //instance
     let weth; let mkr; let dai; let xxx; // TTokens
     let factory; // XPool factory
     let pool; // first pool w/ defaults
+    let safu; //safu
+
+    //token address
+    let AA; let BB; let CC; let DD;
+    let aa; let bb; let cc; let dd;
 
     before(async () => {
         factory = await XFactory.deployed();
+
+        safu = await XConfig.deployed();
+        SAFU = safu.address;
 
         POOL = await factory.newXPool.call();
         await factory.newXPool();
@@ -36,10 +48,20 @@ contract('XPool', async (accounts) => {
         dai = await TToken.new('Dai Stablecoin', 'DAI', 18, admin);
         xxx = await TToken.new('XXX', 'XXX', 18, admin);
 
+        aa = await TToken.new('XXX', 'XXX', 18, admin);
+        bb = await TToken.new('XXX', 'XXX', 18, admin);
+        cc = await TToken.new('XXX', 'XXX', 18, admin);
+        dd = await TToken.new('XXX', 'XXX', 18, admin);
+
         WETH = weth.address;
         MKR = mkr.address;
         DAI = dai.address;
         XXX = xxx.address;
+
+        AA = aa.address;
+        BB = bb.address;
+        CC = cc.address;
+        DD = dd.address;
 
         /*
             Tests assume token prices
@@ -54,6 +76,11 @@ contract('XPool', async (accounts) => {
         await mkr.mint(admin, toWei('20'));
         await dai.mint(admin, toWei('10000'));
         await xxx.mint(admin, toWei('10'));
+
+        await aa.mint(admin, toWei('100'));
+        await bb.mint(admin, toWei('100'));
+        await cc.mint(admin, toWei('100'));
+        await dd.mint(admin, toWei('100'));
 
         // User1 balances
         await weth.mint(user1, toWei('25'), { from: admin });
@@ -70,7 +97,7 @@ contract('XPool', async (accounts) => {
 
     describe('Binding Tokens', () => {
         it('Controller is msg.sender', async () => {
-            const controller = await pool._controller();
+            const controller = await pool.controller();
             assert.equal(controller, admin);
         });
 
@@ -81,10 +108,10 @@ contract('XPool', async (accounts) => {
             assert(!isBound);
         });
 
-        it('Fails binding tokens that are not approved', async () => {
+        it('Fails binding tokens which balance < 0.000001 TOKEN', async () => {
+            await aa.transfer(POOL, toWei('1', 'wei'));
             await truffleAssert.reverts(
-                pool.bind(MKR, toWei('10'), toWei('2.5')), 'ERR_BTOKEN_BAD_CALLER',
-            );
+                pool.bind(AA, toWei('2.5')), 'ERR_MIN_BALANCE');
         });
 
         it('Admin approves tokens', async () => {
@@ -94,37 +121,28 @@ contract('XPool', async (accounts) => {
             await xxx.approve(POOL, MAX);
         });
 
-        it('Fails binding weights and balances outside MIX MAX', async () => {
-            await truffleAssert.reverts(
-                pool.bind(WETH, toWei('51'), toWei('1')),
-                'ERR_INSUFFICIENT_BAL',
-            );
-            await truffleAssert.reverts(
-                pool.bind(MKR, toWei('0.0000000000001'), toWei('1')),
-                'ERR_MIN_BALANCE',
-            );
-            await truffleAssert.reverts(
-                pool.bind(DAI, toWei('1000'), toWei('0.99')),
-                'ERR_MIN_WEIGHT',
-            );
-            await truffleAssert.reverts(
-                pool.bind(WETH, toWei('5'), toWei('50.01')),
-                'ERR_MAX_WEIGHT',
-            );
+        it('Fails binding weights and balances outside MIX MAX WEIGHT', async () => {
+            await aa.transfer(POOL, toWei('1'));
+            await truffleAssert.reverts(pool.bind(AA, toWei('0.99')), 'ERR_MIN_WEIGHT');
+            await truffleAssert.reverts(pool.bind(AA, toWei('50.01')), 'ERR_MAX_WEIGHT');
         });
 
         it('Fails finalizing pool without 2 tokens', async () => {
-            await truffleAssert.reverts(
-                pool.finalize(),
-                'ERR_MIN_TOKENS',
-            );
+            const swapFeeValue = toWei(String(swapFee));
+            await truffleAssert.reverts(pool.finalize(swapFeeValue), 'ERR_MIN_TOKENS');
         });
 
         it('Admin binds tokens', async () => {
             // Equal weights WETH, MKR, DAI
-            await pool.bind(WETH, toWei('50'), toWei('5'));
-            await pool.bind(MKR, toWei('20'), toWei('5'));
-            await pool.bind(DAI, toWei('10000'), toWei('5'));
+            await weth.transfer(POOL, toWei('50'));
+            await pool.bind(WETH, toWei('5'));
+
+            await mkr.transfer(POOL, toWei('20'));
+            await pool.bind(MKR, toWei('5'));
+
+            await dai.transfer(POOL, toWei('10000'));
+            await pool.bind(DAI, toWei('5'));
+
             const numTokens = await pool.getNumTokens();
             assert.equal(3, numTokens);
             const totalDernomWeight = await pool.getTotalDenormalizedWeight();
@@ -137,41 +155,15 @@ contract('XPool', async (accounts) => {
             assert.equal(20, fromWei(mkrBalance));
         });
 
-        it('Admin unbinds token', async () => {
-            await pool.bind(XXX, toWei('10'), toWei('5'));
-            let adminBalance = await xxx.balanceOf(admin);
-            assert.equal(0, fromWei(adminBalance));
-            await pool.unbind(XXX);
-            adminBalance = await xxx.balanceOf(admin);
-            assert.equal(10, fromWei(adminBalance));
-            const numTokens = await pool.getNumTokens();
-            assert.equal(3, numTokens);
-            const totalDernomWeight = await pool.getTotalDenormalizedWeight();
-            assert.equal(15, fromWei(totalDernomWeight));
-        });
-
         it('Fails binding above MAX TOTAL WEIGHT', async () => {
-            await truffleAssert.reverts(
-                pool.bind(XXX, toWei('1'), toWei('40')),
-                'ERR_MAX_TOTAL_WEIGHT',
-            );
+            await xxx.transfer(POOL, toWei('1'));
+            await truffleAssert.reverts(pool.bind(XXX, toWei('36')), 'ERR_MAX_TOTAL_WEIGHT');
         });
 
-        it('Fails rebinding token or unbinding random token', async () => {
+        it('Fails binding random token', async () => {
             await truffleAssert.reverts(
-                pool.bind(WETH, toWei('0'), toWei('1')), 'ERR_IS_BOUND',
+                pool.bind(WETH, toWei('1')), 'ERR_IS_BOUND',
             );
-            await truffleAssert.reverts(
-                pool.rebind(XXX, toWei('0'), toWei('1')), 'ERR_NOT_BOUND',
-            );
-            await truffleAssert.reverts(
-                pool.unbind(XXX), 'ERR_NOT_BOUND',
-            );
-        });
-
-        it('Get current tokens', async () => {
-            const currentTokens = await pool.getCurrentTokens();
-            assert.sameMembers(currentTokens, [WETH, MKR, DAI]);
         });
 
         it('Fails getting final tokens before finalized', async () => {
@@ -184,10 +176,7 @@ contract('XPool', async (accounts) => {
     describe('Finalizing pool', () => {
         it('Fails when other users interact before finalizing', async () => {
             await truffleAssert.reverts(
-                pool.bind(WETH, toWei('5'), toWei('5'), { from: user1 }), 'ERR_NOT_CONTROLLER',
-            );
-            await truffleAssert.reverts(
-                pool.rebind(WETH, toWei('5'), toWei('5'), { from: user1 }), 'ERR_NOT_CONTROLLER',
+                pool.bind(WETH, toWei('5'), { from: user1 }), 'ERR_NOT_CONTROLLER',
             );
             await truffleAssert.reverts(
                 pool.joinPool(toWei('1'), [MAX, MAX], { from: user1 }), 'ERR_NOT_FINALIZED',
@@ -195,23 +184,20 @@ contract('XPool', async (accounts) => {
             await truffleAssert.reverts(
                 pool.exitPool(toWei('1'), [toWei('0'), toWei('0')], { from: user1 }), 'ERR_NOT_FINALIZED',
             );
-            await truffleAssert.reverts(
-                pool.unbind(DAI, { from: user1 }), 'ERR_NOT_CONTROLLER',
-            );
         });
 
         it('Fails calling any swap before finalizing', async () => {
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountIn(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_NOT_FINALIZED.',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountIn(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')), 'ERR_NOT_FINALIZED.',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountOut(WETH, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_NOT_FINALIZED',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200'), address(0)), 'ERR_SWAP_NOT_PUBLIC',
+                pool.swapExactAmountOut(DAI, toWei('2.5'), WETH, toWei('475'), toWei('200')), 'ERR_NOT_FINALIZED',
             );
         });
 
@@ -220,94 +206,76 @@ contract('XPool', async (accounts) => {
                 pool.joinswapExternAmountIn(WETH, toWei('2.5'), toWei('0')), 'ERR_NOT_FINALIZED',
             );
             await truffleAssert.reverts(
-                pool.joinswapPoolAmountOut(WETH, toWei('2.5'), MAX), 'ERR_NOT_FINALIZED',
-            );
-            await truffleAssert.reverts(
                 pool.exitswapPoolAmountIn(WETH, toWei('2.5'), toWei('0')), 'ERR_NOT_FINALIZED',
             );
-            await truffleAssert.reverts(
-                pool.exitswapExternAmountOut(WETH, toWei('2.5'), MAX), 'ERR_NOT_FINALIZED',
-            );
         });
 
-        it('Only controller can setPublicSwap', async () => {
-            await pool.setPublicSwap(true);
-            const publicSwap = pool.isPublicSwap();
-            assert(publicSwap);
-            await truffleAssert.reverts(pool.setPublicSwap(true, { from: user1 }), 'ERR_NOT_CONTROLLER');
-        });
-
-        it('Fails setting low swap fees', async () => {
+        it('Fails setting swap fee which is not in SWAP_FEES', async () => {
+            const swapFeeValue = toWei('0.015'); //1.5%
             await truffleAssert.reverts(
-                pool.setSwapFee(toWei('0.0000001')), 'ERR_MIN_FEE',
-            );
-        });
-
-        it('Fails setting high swap fees', async () => {
-            await truffleAssert.reverts(
-                pool.setSwapFee(toWei('0.11')), 'ERR_MAX_FEE',
+                pool.finalize(swapFeeValue), 'ERR_INVALID_SWAP_FEE',
             );
         });
 
         it('Fails nonadmin sets fees or controller', async () => {
             await truffleAssert.reverts(
-                pool.setSwapFee(toWei('0.003'), { from: user1 }), 'ERR_NOT_CONTROLLER',
-            );
-            await truffleAssert.reverts(
                 pool.setController(user1, { from: user1 }), 'ERR_NOT_CONTROLLER',
             );
         });
 
-        it('Admin sets swap fees', async () => {
-            await pool.setSwapFee(toWei('0.003'));
-            const swapFee = await pool._swapFee();
-            assert.equal(0.003, fromWei(swapFee));
-        });
-
         it('Fails nonadmin finalizes pool', async () => {
+            const swapFeeValue = toWei(String(swapFee));
             await truffleAssert.reverts(
-                pool.finalize({ from: user1 }), 'ERR_NOT_CONTROLLER',
+                pool.finalize(swapFeeValue, { from: user1 }), 'ERR_NOT_CONTROLLER',
             );
         });
 
         it('Admin finalizes pool', async () => {
-            const tx = await pool.finalize();
-            const adminBal = await pool.balanceOf(admin);
-            assert.equal(100, fromWei(adminBal));
+            const swapFeeValue = toWei(String(swapFee));
+            const tx = await pool.finalize(swapFeeValue);
+            const adminXPT = await pool.balanceOf(admin);
+            assert.equal(100, fromWei(adminXPT));
             truffleAssert.eventEmitted(tx, 'Transfer', (event) => event.dst === admin);
-            const finalized = pool.isFinalized();
+            const finalized = pool.finalized();
             assert(finalized);
         });
 
         it('Fails finalizing pool after finalized', async () => {
+            const swapFeeValue = toWei(String(swapFee));
             await truffleAssert.reverts(
-                pool.finalize(), 'ERR_IS_FINALIZED',
+                pool.finalize(swapFeeValue), 'ERR_IS_FINALIZED',
             );
-        });
-
-        it('Cant setPublicSwap, setSwapFee when finalized', async () => {
-            await truffleAssert.reverts(pool.setPublicSwap(false), 'ERR_IS_FINALIZED');
-            await truffleAssert.reverts(pool.setSwapFee(toWei('0.01')), 'ERR_IS_FINALIZED');
         });
 
         it('Fails binding new token after finalized', async () => {
+            await bb.transfer(POOL, toWei('1'));
             await truffleAssert.reverts(
-                pool.bind(XXX, toWei('10'), toWei('5')), 'ERR_IS_FINALIZED',
-            );
-            await truffleAssert.reverts(
-                pool.rebind(DAI, toWei('10'), toWei('5')), 'ERR_IS_FINALIZED',
+                pool.bind(BB, toWei('5')), 'ERR_IS_FINALIZED',
             );
         });
 
-        it('Fails unbinding after finalized', async () => {
-            await truffleAssert.reverts(
-                pool.unbind(WETH), 'ERR_IS_FINALIZED',
-            );
-        });
-
-        it('Get final tokens', async () => {
+        it('Get final pool data', async () => {
             const finalTokens = await pool.getFinalTokens();
             assert.sameMembers(finalTokens, [WETH, MKR, DAI]);
+
+            const numTokens = await pool.getNumTokens();
+            assert.equal(3, numTokens);
+
+            const swapFee = await pool.swapFee();
+            assert.equal(toWei('0.001'), swapFee);
+        });
+
+        it('Get final weights', async () => {
+            const totalWeight = await pool.getTotalDenormalizedWeight();
+            const weth_denorm = await pool.getDenormalizedWeight(WETH);
+            const mkr_denorm = await pool.getDenormalizedWeight(MKR);
+            const dai_denorm = await pool.getDenormalizedWeight(DAI);
+
+            //console.log(`totalWeight: ${totalWeight}, weth_denorm: ${weth_denorm}, mkr_denorm: ${mkr_denorm}, dai_denorm: ${dai_denorm}`);
+            assert.equal(5, fromWei(weth_denorm));
+            assert.equal(5, fromWei(mkr_denorm));
+            assert.equal(5, fromWei(dai_denorm));
+            assert.equal(1, fromWei(totalWeight));
         });
     });
 
@@ -333,61 +301,71 @@ contract('XPool', async (accounts) => {
         });
 
         /*
-          Current pool balances
-          WETH - 52.5
-          MKR - 21
-          DAI - 10,500
-          XXX - 0
+          Current pool balances and denorms
+          WETH - 52.5, denorm: 5 
+          MKR - 21, denorm: 5 
+          DAI - 10,500, denorm: 5 
+          XXX - 1
+          Swap Fee: 0.25%
         */
-
-        it('Fails admin unbinding token after finalized and others joined', async () => {
-            await truffleAssert.reverts(pool.unbind(DAI), 'ERR_IS_FINALIZED');
-        });
 
         it('getSpotPriceSansFee and getSpotPrice', async () => {
             const wethPrice = await pool.getSpotPriceSansFee(DAI, WETH);
             assert.equal(200, fromWei(wethPrice));
 
             const wethPriceFee = await pool.getSpotPrice(DAI, WETH);
-            const wethPriceFeeCheck = ((10500 / 5) / (52.5 / 5)) * (1 / (1 - 0.003));
-            // 200.6018054162487462
+            const wethPriceFeeCheck = ((10500 / 5) / (52.5 / 5)) * (1 / (1 - 0.001));
             assert.equal(fromWei(wethPriceFee), wethPriceFeeCheck);
         });
 
         it('Fail swapExactAmountIn unbound or over min max ratios', async () => {
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(WETH, toWei('2.5'), XXX, toWei('100'), toWei('200'), address(0), { from: user2 }),
+                pool.swapExactAmountIn(WETH, toWei('2.5'), XXX, toWei('100'), toWei('200'), { from: user2 }),
                 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), address(0), { from: user2 }),
+                pool.swapExactAmountIn(WETH, toWei('26.5'), DAI, toWei('5000'), toWei('200'), { from: user2 }),
                 'ERR_MAX_IN_RATIO',
             );
         });
 
-        it('swapExactAmountIn without referrer', async () => {
+        it('swapExactAmountIn with referrer', async () => {
+            let balance_user1_before = fromWei(await weth.balanceOf(user1));
+            let balance_safu_before = fromWei(await weth.balanceOf(SAFU));
+
             // 2.5 WETH -> DAI
-            const expected = calcOutGivenIn(52.5, 5, 10500, 5, 2.5, 0.003);
-            const txr = await pool.swapExactAmountIn(
+            const expected = calcOutGivenIn(52.5, 5, 10500, 5, 2.5, 0.001);
+            const txr = await pool.swapExactAmountInRefer(
                 WETH,
                 toWei('2.5'),
                 DAI,
                 toWei('475'),
                 toWei('200'),
-                address(0),
+                user1,
                 { from: user2 },
             );
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
-            // 475.905805337091423
 
+            let balance_user1_after = fromWei(await weth.balanceOf(user1));
+            let balance_safu_after = fromWei(await weth.balanceOf(SAFU));
+
+            // 2.5 * 0.1% * 20% = 0.0005 WETH to user1
+            const referReward = calcRelative(balance_user1_after, balance_user1_before);
+            assert.equal(0.0005, referReward);
+
+            // noFarmPool sent 2.5 * 0.05% = 0.00125 WETH to SAFU
+            const safuReward = calcRelative(balance_safu_after, balance_safu_before);
+            assert.equal(0.00125, safuReward);
+
+            // 475.905805337091423
             const actual = fromWei(log.args[4]);
             const relDif = calcRelativeDiff(expected, actual);
             if (verbose) {
                 console.log('swapExactAmountIn');
                 console.log(`expected: ${expected})`);
-                console.log(`actual  : ${actual})`);
-                console.log(`relDif  : ${relDif})`);
+                console.log(`actual: ${actual})`);
+                console.log(`relDif: ${relDif})`);
             }
 
             assert.isAtMost(relDif.toNumber(), errorDelta);
@@ -395,41 +373,51 @@ contract('XPool', async (accounts) => {
             const userDaiBalance = await dai.balanceOf(user2);
             assert.equal(fromWei(userDaiBalance), Number(fromWei(log.args[4])));
 
-            // 182.804672101083406128
+            //check diff between record balance and actual balance
+            let weth_balance_pool = await weth.balanceOf(POOL);
+            let dai_balance_pool = await dai.balanceOf(POOL);
+            let mkr_balance_pool = await mkr.balanceOf(POOL);
+
+            let weth_balance_record = await pool.getBalance(WETH);
+            let dai_balance_record = await pool.getBalance(DAI);
+            let mkr_balance_record = await pool.getBalance(MKR);
+
+            //console.log(`weth_balance_record: ${weth_balance_record}, dai_balance_record: ${dai_balance_record}, mkr_balance_record: ${mkr_balance_record}`);
+            assert.equal(fromWei(weth_balance_pool), fromWei(weth_balance_record));
+            assert.equal(fromWei(dai_balance_pool), fromWei(dai_balance_record));
+            assert.equal(fromWei(mkr_balance_pool), fromWei(mkr_balance_record));
+
+            //dai: 10023.182871948724947, weth: 54.99825
             const wethPrice = await pool.getSpotPrice(DAI, WETH);
-            const wethPriceFeeCheck = ((10024.094194662908577 / 5) / (55 / 5)) * (1 / (1 - 0.003));
+            const wethPriceFeeCheck = ((10023.182871948724947 / 5) / (54.99825 / 5)) * (1 / (1 - 0.001));
             assert.approximately(Number(fromWei(wethPrice)), Number(wethPriceFeeCheck), errorDelta);
 
             const daiNormWeight = await pool.getNormalizedWeight(DAI);
             assert.equal(0.333333333333333333, fromWei(daiNormWeight));
         });
 
-        //TODO: 'swapExactAmountIn with referrer'
-
         it('swapExactAmountOut without referrer', async () => {
             // ETH -> 1 MKR
-            // const amountIn = (55 * (((21 / (21 - 1)) ** (5 / 5)) - 1)) / (1 - 0.003);
-            const expected = calcInGivenOut(55, 5, 21, 5, 1, 0.003);
+            // weth: 54.99825, mkr: 21
+            const expected = calcInGivenOut(54.99825, 5, 21, 5, 1, 0.001);
             const txr = await pool.swapExactAmountOut(
                 WETH,
                 toWei('3'),
                 MKR,
                 toWei('1.0'),
                 toWei('500'),
-                address(0),
                 { from: user2 },
             );
             const log = txr.logs[0];
             assert.equal(log.event, 'LOG_SWAP');
-            // 2.758274824473420261
 
             const actual = fromWei(log.args[3]);
             const relDif = calcRelativeDiff(expected, actual);
             if (verbose) {
                 console.log('swapExactAmountOut');
                 console.log(`expected: ${expected})`);
-                console.log(`actual  : ${actual})`);
-                console.log(`relDif  : ${relDif})`);
+                console.log(`actual: ${actual})`);
+                console.log(`relDif: ${relDif})`);
             }
 
             assert.isAtMost(relDif.toNumber(), errorDelta);
@@ -449,42 +437,28 @@ contract('XPool', async (accounts) => {
             );
 
             await truffleAssert.reverts(
-                pool.joinswapPoolAmountOut(DAI, toWei('10'), toWei('100')), 'ERR_LIMIT_IN',
-            );
-
-            await truffleAssert.reverts(
                 pool.exitswapPoolAmountIn(DAI, toWei('1'), toWei('1000')), 'ERR_LIMIT_OUT',
-            );
-
-            await truffleAssert.reverts(
-                pool.exitswapExternAmountOut(DAI, toWei('1000'), toWei('1')), 'ERR_LIMIT_IN',
             );
         });
 
         it('Fails calling any swap on unbound token', async () => {
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
+                pool.swapExactAmountIn(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountIn(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
+                pool.swapExactAmountIn(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
+                pool.swapExactAmountOut(XXX, toWei('2.5'), DAI, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.swapExactAmountOut(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200'), address(0)), 'ERR_NOT_BOUND',
+                pool.swapExactAmountOut(DAI, toWei('2.5'), XXX, toWei('475'), toWei('200')), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
                 pool.joinswapExternAmountIn(XXX, toWei('2.5'), toWei('0')), 'ERR_NOT_BOUND',
             );
             await truffleAssert.reverts(
-                pool.joinswapPoolAmountOut(XXX, toWei('2.5'), MAX), 'ERR_NOT_BOUND',
-            );
-            await truffleAssert.reverts(
                 pool.exitswapPoolAmountIn(XXX, toWei('2.5'), toWei('0')), 'ERR_NOT_BOUND',
-            );
-            await truffleAssert.reverts(
-                pool.exitswapExternAmountOut(XXX, toWei('2.5'), MAX), 'ERR_NOT_BOUND',
             );
         });
 

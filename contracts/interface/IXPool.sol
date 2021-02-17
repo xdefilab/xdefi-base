@@ -75,6 +75,8 @@ interface IXPool {
 
     function controller() external view returns (uint256);
 
+    function isFarmPool() external view returns (uint256);
+
     function xconfig() external view returns (uint256);
 
     function getDenormalizedWeight(address) external view returns (uint256);
@@ -131,4 +133,8 @@ interface IXPool {
     function setPoolType(uint8 XPoolType) external;
     
     function setExpery(uint256 expiryBlockHeight) external;
+    // Pool Governance
+    function updateSafu(address safu, uint256 fee) external;
+
+    function updateFarm(bool isFarm) external;
 }
