@@ -653,6 +653,8 @@ contract XPool is XApollo, XPToken, XConst {
             "ERR_MAX_IN_RATIO"
         );
 
+        uint256 curSwapFee = getSwapFee();
+
         _pullUnderlying(tokenIn, msg.sender, tokenAmountIn);
 
         // to SAFU
@@ -690,6 +692,8 @@ contract XPool is XApollo, XPToken, XConst {
         require(finalized, "ERR_NOT_FINALIZED");
         require(_records[tokenOut].bound, "ERR_NOT_BOUND");
         require(poolAmountIn >= MIN_POOL_AMOUNT, "ERR_MIN_AMOUNT");
+
+        uint256 curSwapFee = getSwapFee();
 
         _pullPoolShare(msg.sender, poolAmountIn);
 

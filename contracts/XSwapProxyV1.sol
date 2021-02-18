@@ -403,6 +403,53 @@ contract XSwapProxyV1 is ReentrancyGuard {
         transferAll(IERC20(tokenIn), getBalance(tokenIn));
     }
 
+    // Single Swap
+    function SingleBatchSwapExactIn(
+        address pool,
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        uint256 maxPrice
+    ) public payable returns (uint256 amountOut) {
+
+        Swap memory swap = Swap(
+            pool,
+            amountIn,
+            minAmountOut,
+            maxPrice
+        );
+
+        Swap[] memory swaps = new Swap[](1);
+        swaps[0] = swap;
+
+        return batchSwapExactIn(swaps, tokenIn, tokenOut, amountIn, minAmountOut);
+    }
+
+    function SingleBatchSwapExactOut(
+        address pool,
+        address tokenIn,
+        address tokenOut,
+        uint256 maxAmountIn,
+        uint256 amountOut,
+        uint256 maxPrice
+    ) public payable returns (uint256 AmountOut) {
+
+        Swap memory swap = Swap(
+            pool,
+            maxAmountIn,
+            amountOut,
+            maxPrice
+        );
+
+        Swap[] memory swaps = new Swap[](1);
+        swaps[0] = swap;
+
+        return batchSwapExactOut(swaps, tokenIn, tokenOut, maxAmountIn);
+    }
+
+    function SingleBatchSwapExactOut() public payable returns (uint256 AmountIn) {}
+
     // Pool Management
     function create(
         address factoryAddress,
@@ -444,49 +491,50 @@ contract XSwapProxyV1 is ReentrancyGuard {
         return address(pool);
     }
 
-    function createOptionPool(
-        address factoryAddress,
-        address[] calldata tokens,
-        uint256[] calldata balances,
-        uint256[] calldata denorms,
-        uint256 swapFee,
-        uint256 poolExpiryBlockHeight
-    ) external payable nonReentrant returns (address) {
-        require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
-        require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
-        require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
-        require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
+    // function createOptionPool(
+    //     address factoryAddress,
+    //     address[] calldata tokens,
+    //     uint256[] calldata balances,
+    //     uint256[] calldata denorms,
+    //     uint256 swapFee,
+    //     uint256 exitFee,
+    //     uint256 poolExpiryBlockHeight
+    // ) external payable nonReentrant returns (address) {
+    //     require(tokens.length == balances.length, "ERR_LENGTH_MISMATCH");
+    //     require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
+    //     require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
+    //     require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
-        // check pool exist
-        (bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
-        require(!exist, "ERR_POOL_EXISTS");
+    //     // check pool exist
+    //     (bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
+    //     require(!exist, "ERR_POOL_EXISTS");
 
-        // create new pool
-        IXFactory factory = IXFactory(factoryAddress);
-        IXPool pool = factory.newXPool();
-        bool hasETH = false;
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (
-                transferFromAllTo(IERC20(tokens[i]), balances[i], address(pool))
-            ) {
-                hasETH = true;
-                pool.bind(address(weth), denorms[i]);
-            } else {
-                pool.bind(tokens[i], denorms[i]);
-            }
-        }
+    //     // create new pool
+    //     IXPool pool = IXFactory(factoryAddress).newXPool();
+    //     bool hasETH = false;
+    //     for (uint256 i = 0; i < tokens.length; i++) {
+    //         if (
+    //             transferFromAllTo(IERC20(tokens[i]), balances[i], address(pool))
+    //         ) {
+    //             hasETH = true;
+    //             pool.bind(address(weth), denorms[i]);
+    //         } else {
+    //             pool.bind(tokens[i], denorms[i]);
+    //         }
+    //     }
+    //     require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
+    //     pool.setExitFee(exitFee);
         
-        pool.setPoolType(1);
-        pool.setExpery(expiryBlockHeight);
+    //     pool.setPoolType(1);
+    //     pool.setExpery(poolExpiryBlockHeight);
         
-        require(msg.value == 0 || hasETH, "ERR_INVALID_PAY");
-        pool.finalize(swapFee);
+    //     pool.finalize(swapFee);
 
-        xconfig.addPoolSig(sig);
-        pool.transfer(msg.sender, pool.balanceOf(address(this)));
+    //     xconfig.addPoolSig(sig);
+    //     pool.transfer(msg.sender, pool.balanceOf(address(this)));
 
-        return address(pool);
-    }
+    //     return address(pool);
+    // }
 
     function joinPool(
         address poolAddress,
