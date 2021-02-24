@@ -6,9 +6,11 @@ const TToken = artifacts.require('TToken');
 const TTokenFactory = artifacts.require('TTokenFactory');
 const XFactory = artifacts.require('XFactory');
 const XPool = artifacts.require('XPool');
+const XConfig = artifacts.require('XConfig');
 const Weth9 = artifacts.require('WETH9');
 const errorDelta = 10 ** -8;
 const swapFee = 10 ** -1; // 0.001;
+const { expectRevert } = require('@openzeppelin/test-helpers');
 
 contract('XSwapProxy', async (accounts) => {
     const admin = accounts[0];
@@ -22,6 +24,7 @@ contract('XSwapProxy', async (accounts) => {
     describe('Batch Swaps', () => {
         let factory;
         let proxy; let PROXY;
+        let xconfig; let XCONFIG;
         let tokens;
         let pool1; let pool2; let pool3;
         let POOL1; let POOL2; let POOL3;
@@ -36,6 +39,9 @@ contract('XSwapProxy', async (accounts) => {
             PROXY = proxy.address;
             tokens = await TTokenFactory.deployed();
             factory = await XFactory.deployed();
+
+            xconfig = await XConfig.deployed();
+            XCONFIG = xconfig.address;
 
             await tokens.build('DAI', 'DAI', 18, minter, { from: minter });
             await tokens.build('MKR', 'MKR', 18, minter, { from: minter });
@@ -58,7 +64,8 @@ contract('XSwapProxy', async (accounts) => {
             let dai_balance_admin = await dai.balanceOf(admin);
             let weth_balance_nonadmin = await weth.balanceOf(nonAdmin);
             let dai_balance_nonadmin = await dai.balanceOf(nonAdmin);
-            console.log(`weth_balance_admin: ${fromWei(weth_balance_admin)}, dai_balance_admin: ${fromWei(dai_balance_admin)},  weth_balance_nonadmin: ${fromWei(weth_balance_nonadmin)}, dai_balance_nonadmin: ${fromWei(dai_balance_nonadmin)}`)
+            //console.log(`weth_balance_admin: ${fromWei(weth_balance_admin)}, dai_balance_admin: ${fromWei(dai_balance_admin)},  weth_balance_nonadmin: ${fromWei(weth_balance_nonadmin)}, dai_balance_nonadmin: ${fromWei(dai_balance_nonadmin)}`)
+            //weth_balance_admin: 30, dai_balance_admin: 10000, weth_balance_nonadmin: 25, dai_balance_nonadmin: 10000
 
             POOL1 = await factory.newXPool.call(); // this works fine in clean room
             await factory.newXPool();
@@ -114,41 +121,53 @@ contract('XSwapProxy', async (accounts) => {
             dai_balance_admin = await dai.balanceOf(admin);
             weth_balance_nonadmin = await weth.balanceOf(nonAdmin);
             dai_balance_nonadmin = await dai.balanceOf(nonAdmin);
-            console.log(`weth_balance_admin: ${fromWei(weth_balance_admin)}, dai_balance_admin: ${fromWei(dai_balance_admin)},  weth_balance_nonadmin: ${fromWei(weth_balance_nonadmin)}, dai_balance_nonadmin: ${fromWei(dai_balance_nonadmin)}`)
+            //console.log(`weth_balance_admin: ${fromWei(weth_balance_admin)}, dai_balance_admin: ${fromWei(dai_balance_admin)},  weth_balance_nonadmin: ${fromWei(weth_balance_nonadmin)}, dai_balance_nonadmin: ${fromWei(dai_balance_nonadmin)}`)
+            //weth_balance_admin: 7, dai_balance_admin: 5500, weth_balance_nonadmin: 25, dai_balance_nonadmin: 10000
+            assert.equal(weth_balance_admin, toWei('7'));
+            assert.equal(weth_balance_nonadmin, toWei('25'));
+            assert.equal(dai_balance_admin, toWei('5500'));
+            assert.equal(dai_balance_nonadmin, toWei('10000'));
         });
 
         it('deploy duplicated pool should not work', async () => {
-            const createTokens = [DAI, MKR];
-            const createBalances = [toWei('10'), toWei('1')];
+            const createTokens = [];
+            const createBalances = [];
             const createWeights = [toWei('5'), toWei('5')];
-            const swapFee = toWei('0.03');
-            const finalize = true;
+            const swapFee = toWei('0.025');
+            const exitFee = 0;
 
-            const params = [
-                FACTORY,
-                createTokens,
-                createBalances,
-                createWeights,
-                swapFee,
-                finalize,
-            ];
+            if (DAI <= MKR) {
+                createTokens.push(DAI);
+                createBalances.push(toWei('10'));
+                createTokens.push(MKR);
+                createBalances.push(toWei('1'));
+            } else {
+                createTokens.push(MKR);
+                createBalances.push(toWei('1'));
+                createTokens.push(DAI);
+                createBalances.push(toWei('10'));
+            }
 
-            const functionSig = web3.eth.abi.encodeFunctionSignature(
-                'create(address,address[],uint256[],uint256[],uint256,bool)',
+            let swproxy = await xconfig.getSwapProxy();
+            assert.equal(swproxy, PROXY);
+
+            let poolSigCount = (await xconfig.poolSigCount.call()).toString();
+            assert.equal(poolSigCount, '0');
+
+            //should success
+            let pool = await proxy.create(XFactory.address, createTokens, createBalances, createWeights, swapFee, exitFee);
+
+            const createNewWeights = [toWei('15'), toWei('15')];
+            //should revert
+            await expectRevert(
+                proxy.create(XFactory.address, createTokens, createBalances, createNewWeights, swapFee, exitFee),
+                'ERR_POOL_EXISTS',
             );
-            const functionData = web3.eth.abi.encodeParameters(
-                ['address', 'address[]', 'uint256[]', 'uint256[]', 'uint256', 'bool'],
-                params,
-            );
 
-            const argumentData = functionData.substring(2);
-            const inputData = `${functionSig}${argumentData}`;
+            poolSigCount = (await xconfig.poolSigCount.call()).toString();
+            assert.equal(poolSigCount, '1');
 
-            //revert ERR_POOL_EXISTS
-            await truffleAssert.reverts(
-                userProxy.methods['execute(address,bytes)'].call(POOLPROXY, inputData),
-                truffleAssert.ErrorType.REVERT,
-            );
+            //remove liquidity from pool
         });
 
         it('batchSwapExactIn dry', async () => {

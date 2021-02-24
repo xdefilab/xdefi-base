@@ -133,11 +133,14 @@ contract XConfig is XConst {
         //check empty pool
         address pool = poolSigs[sig];
         if (pool != address(0)) {
-            if (IERC20(pool).totalSupply() > MIN_EFFECTIVE_XPT) {
-                exist = true;
+            IERC20 TP = IERC20(pool);
+
+            if (TP.totalSupply() > MIN_EFFECTIVE_XPT) {
+                return (true, sig);
+            } else {
+                //remove sig
+                removePoolSig(sig);
             }
-            //remove sig
-            removePoolSig(sig);
         }
         exist = false;
     }

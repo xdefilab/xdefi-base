@@ -11,15 +11,16 @@ module.exports = {
             host: 'localhost', // Localhost (default: none)
             port: 8545, // Standard Ethereum port (default: none)
             network_id: '*', // Any network (default: none)
+            gas: 5800000,
+            timeoutBlocks: 200,
         },
         kovan: {
             provider: kovanProvider,
             network_id: 42,       // Ropsten's id
-            gas: 9500000,
+            gas: 5500000,
             gasPrice: '10000000000',
             timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
-            skipDryRun: true,
-            websockets: true
+            skipDryRun: true
         },
     },
     // Configure your compilers
