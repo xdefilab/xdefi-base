@@ -30,8 +30,8 @@ contract XConfig is XConst {
     // key: keccak256(tokens[i], norms[i]), value: pool_address
     mapping(bytes32 => address) public poolSigs;
     uint256 public poolSigCount;
-    // empty pool: if XPT totalSupply <= MIN_EFFECTIVE_XPT (0.000001 XPT)
-    uint256 public constant MIN_EFFECTIVE_XPT = 10**12;
+    // empty pool: if XPT totalSupply <= MIN_EFFECTIVE_XPT
+    uint256 public minEffeciveXPT = 10**12; //0.000001 XPT
 
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
@@ -56,6 +56,7 @@ contract XConfig is XConst {
 
     event ADD_FARM_POOL(address indexed pool);
     event RM_FARM_POOL(address indexed pool);
+    event SET_MFXPT(uint256 amount);
 
     event COLLECT(address indexed token, uint256 amount);
 
@@ -135,7 +136,7 @@ contract XConfig is XConst {
         if (pool != address(0)) {
             IERC20 TP = IERC20(pool);
 
-            if (TP.totalSupply() > MIN_EFFECTIVE_XPT) {
+            if (TP.totalSupply() > minEffeciveXPT) {
                 return (true, sig);
             } else {
                 //remove sig
@@ -188,6 +189,11 @@ contract XConfig is XConst {
         require(_fee <= (BONE / 10), "INVALID_SAFU_FEE");
         emit SET_SAFU_FEE(SAFU_FEE, _fee);
         SAFU_FEE = _fee;
+    }
+
+    function setMinEffeciveXPT(uint256 _mfxpt) external onlyCore {
+        minEffeciveXPT = _mfxpt;
+        emit SET_MFXPT(_mfxpt);
     }
 
     function setSwapProxy(address _proxy) external onlyCore {
