@@ -26,13 +26,12 @@ contract XConfig is XConst {
     // Swap Proxy Address
     address private swapProxy;
 
-    // Check Farm Pool
-    //mapping(address => bool) internal farmPools;
-
-    // sorted pool sigs for pool deduplication
-    // key: keccak256(tokens[i], norms[i]), value: pool_exists
-    mapping(bytes32 => bool) internal poolSigs;
+    // pool sigs for pool deduplication
+    // key: keccak256(tokens[i], norms[i]), value: pool_address
+    mapping(bytes32 => address) public poolSigs;
     uint256 public poolSigCount;
+    // empty pool: if XPT totalSupply <= MIN_EFFECTIVE_XPT (0.000001 XPT)
+    uint256 public constant MIN_EFFECTIVE_XPT = 10**12;
 
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
@@ -44,8 +43,16 @@ contract XConfig is XConst {
 
     event SET_PROXY(address indexed proxy, address indexed proxyNew);
 
-    event ADD_POOL_SIG(address indexed caller, bytes32 sig);
-    event RM_POOL_SIG(address indexed caller, bytes32 sig);
+    event ADD_POOL_SIG(
+        address indexed caller,
+        address indexed pool,
+        bytes32 sig
+    );
+    event RM_POOL_SIG(
+        address indexed caller,
+        address indexed pool,
+        bytes32 sig
+    );
 
     event ADD_FARM_POOL(address indexed pool);
     event RM_FARM_POOL(address indexed pool);
@@ -91,11 +98,15 @@ contract XConfig is XConst {
         return address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
     }
 
-    // check pool existence which has the same tokens(sorted by address) and weights
-    // the decimals of denorms will allways between [10**18, 50 * 10**18]
-    function hasPool(address[] calldata tokens, uint256[] calldata denorms)
+    /**
+     * pool deduplication
+     * @dev check pool existence which has the same tokens(sorted by address) and weights
+     * the denorms will allways between [10**18, 50 * 10**18]
+     * @notice if pool is address(0), means not created yet
+     * @return pool exists and pool sig
+     */
+    function dedupPool(address[] calldata tokens, uint256[] calldata denorms)
         external
-        view
         returns (bool exist, bytes32 sig)
     {
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
@@ -107,6 +118,7 @@ contract XConfig is XConst {
             totalWeight = totalWeight.badd(denorms[i]);
         }
 
+        //pool sig generated
         bytes memory poolInfo;
         for (uint8 i = 0; i < tokens.length; i++) {
             if (i > 0) {
@@ -118,7 +130,38 @@ contract XConfig is XConst {
         }
         sig = keccak256(poolInfo);
 
-        exist = poolSigs[sig];
+        //check empty pool
+        address pool = poolSigs[sig];
+        if (pool != address(0)) {
+            if (IERC20(pool).totalSupply() > MIN_EFFECTIVE_XPT) {
+                exist = true;
+            }
+            //remove sig
+            removePoolSig(sig);
+        }
+        exist = false;
+    }
+
+    // add pool's sig
+    // only allow called by swapProxy
+    function addPoolSig(bytes32 sig, address pool) external {
+        require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
+        require(pool != address(0), "ERR_ZERO_ADDR");
+        require(sig != 0, "ERR_NOT_SIG");
+        poolSigs[sig] = pool;
+        poolSigCount = poolSigCount.badd(1);
+
+        emit ADD_POOL_SIG(msg.sender, pool, sig);
+    }
+
+    // remove pool's sig
+    function removePoolSig(bytes32 sig) internal {
+        require(sig != 0, "ERR_NOT_SIG");
+        address pool = poolSigs[sig];
+        poolSigs[sig] = address(0);
+        poolSigCount = poolSigCount.bsub(1);
+
+        emit RM_POOL_SIG(msg.sender, pool, sig);
     }
 
     function setCore(address _core) external onlyCore {
@@ -148,28 +191,6 @@ contract XConfig is XConst {
         require(_proxy != address(0), "ERR_ZERO_ADDR");
         emit SET_PROXY(swapProxy, _proxy);
         swapProxy = _proxy;
-    }
-
-    // add pool's sig
-    // only allow called by swapProxy
-    function addPoolSig(bytes32 sig) external {
-        require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
-        require(sig != 0, "ERR_NOT_SIG");
-        poolSigs[sig] = true;
-        poolSigCount = poolSigCount.badd(1);
-
-        emit ADD_POOL_SIG(msg.sender, sig);
-    }
-
-    // remove pool's sig
-    // only allow called by swapProxy
-    function removePoolSig(bytes32 sig) external {
-        require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
-        require(sig != 0, "ERR_NOT_SIG");
-        poolSigs[sig] = false;
-        poolSigCount = poolSigCount.bsub(1);
-
-        emit RM_POOL_SIG(msg.sender, sig);
     }
 
     // update SAFU address and SAFE_FEE to pools

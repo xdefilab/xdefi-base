@@ -417,8 +417,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
         require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
-        // check pool exist
-        (bool exist, bytes32 sig) = xconfig.hasPool(tokens, denorms);
+        // pool deduplication
+        (bool exist, bytes32 sig) = xconfig.dedupPool(tokens, denorms);
         require(!exist, "ERR_POOL_EXISTS");
 
         // create new pool
@@ -438,7 +438,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         pool.setExitFee(exitFee);
         pool.finalize(swapFee);
 
-        xconfig.addPoolSig(sig);
+        xconfig.addPoolSig(sig, address(pool));
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
 
         return address(pool);
