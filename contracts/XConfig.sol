@@ -31,7 +31,7 @@ contract XConfig is XConst {
     mapping(bytes32 => address) public poolSigs;
     uint256 public poolSigCount;
     // empty pool: if XPT totalSupply <= MIN_EFFECTIVE_XPT
-    uint256 public minEffeciveXPT = 10**12; //0.000001 XPT
+    uint256 public minEffeciveXPT = 10**14; //0.0001 XPT
 
     uint256 public maxExitFee = BONE / 1000; // 0.1%
 
