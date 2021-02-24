@@ -4,6 +4,7 @@ const XConfig = artifacts.require('XConfig');
 const XPoolCreator = artifacts.require('XPoolCreator');
 
 module.exports = async function (deployer, network, accounts) {
+    //deploy XConfig
     await deployer.deploy(XConfig);
 
     await deployer.deploy(XNum);
@@ -12,5 +13,6 @@ module.exports = async function (deployer, network, accounts) {
     await deployer.deploy(XMath);
     await deployer.link(XMath, XPoolCreator);
 
+    //deploy XPoolCreator
     await deployer.deploy(XPoolCreator);
 };
