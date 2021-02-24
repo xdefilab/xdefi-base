@@ -155,10 +155,13 @@ contract('XSwapProxy', async (accounts) => {
             assert.equal(poolSigCount, '0');
 
             //should success
-            let pool = await proxy.create(XFactory.address, createTokens, createBalances, createWeights, swapFee, exitFee);
+            let SIG_POOL = await proxy.create.call(XFactory.address, createTokens, createBalances, createWeights, swapFee, exitFee);
+            await proxy.create(XFactory.address, createTokens, createBalances, createWeights, swapFee, exitFee);
+            poolSigCount = (await xconfig.poolSigCount.call()).toString();
+            assert.equal(poolSigCount, '1');
 
-            const createNewWeights = [toWei('15'), toWei('15')];
             //should revert
+            const createNewWeights = [toWei('15'), toWei('15')];
             await expectRevert(
                 proxy.create(XFactory.address, createTokens, createBalances, createNewWeights, swapFee, exitFee),
                 'ERR_POOL_EXISTS',
@@ -167,7 +170,17 @@ contract('XSwapProxy', async (accounts) => {
             poolSigCount = (await xconfig.poolSigCount.call()).toString();
             assert.equal(poolSigCount, '1');
 
-            //remove liquidity from pool
+            //remove all liquidity from pool
+            let sigPool = await XPool.at(SIG_POOL);
+            let totalAmount = await sigPool.totalSupply();
+            assert.equal(totalAmount.toString(), '100000000000000000000');
+
+            const minAmountsOut = [0, 0];
+            await sigPool.exitPool(totalAmount, minAmountsOut);
+
+            //should not revert, and create a new one
+            await proxy.create(XFactory.address, createTokens, createBalances, createNewWeights, swapFee, exitFee);
+            assert.equal(poolSigCount, '1');
         });
 
         it('batchSwapExactIn dry', async () => {
