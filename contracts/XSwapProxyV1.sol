@@ -45,6 +45,12 @@ contract XSwapProxyV1 is ReentrancyGuard {
     uint256 public constant MIN_BATCH_SWAPS = 1;
     uint256 public constant MAX_BATCH_SWAPS = 4;
 
+    /**
+     * the address used within the protocol to identify ETH
+     */
+    address public constant ETH_ADDR =
+        address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+
     // WETH9
     IWETH weth;
 
@@ -458,7 +464,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         for (uint256 i = 0; i < tokens.length; i++) {
             if (msg.value > 0 && tokens[i] == address(weth)) {
                 transferFromAllAndApprove(
-                    xconfig.ethAddress(),
+                    ETH_ADDR,
                     maxAmountsIn[i],
                     poolAddress
                 );
@@ -475,10 +481,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         pool.joinPool(poolAmountOut, maxAmountsIn);
         for (uint256 i = 0; i < tokens.length; i++) {
             if (hasEth) {
-                transferAll(
-                    IERC20(xconfig.ethAddress()),
-                    getBalance(xconfig.ethAddress())
-                );
+                transferAll(IERC20(ETH_ADDR), getBalance(ETH_ADDR));
             } else {
                 transferAll(IERC20(tokens[i]), getBalance(tokens[i]));
             }
@@ -521,7 +524,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
     // Internal
     function getBalance(address token) internal view returns (uint256) {
-        if (token == xconfig.ethAddress()) {
+        if (token == ETH_ADDR) {
             return weth.balanceOf(address(this));
         }
         return IERC20(token).balanceOf(address(this));
@@ -531,7 +534,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         if (amount == 0) {
             return true;
         }
-        if (address(token) == xconfig.ethAddress()) {
+        if (address(token) == ETH_ADDR) {
             weth.withdraw(amount);
             (bool xfer, ) = msg.sender.call.value(amount).gas(9100)("");
             require(xfer, "ERR_ETH_FAILED");
@@ -547,10 +550,12 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address to
     ) internal returns (bool hasETH) {
         hasETH = false;
-        if (address(token) == xconfig.ethAddress()) {
+        if (address(token) == ETH_ADDR) {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
-            weth.transfer(to, amount);
+            if (to != address(this)) {
+                weth.transfer(to, amount);
+            }
             hasETH = true;
         } else {
             token.safeTransferFrom(msg.sender, to, amount);
@@ -563,7 +568,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address spender
     ) internal returns (bool hasETH) {
         hasETH = false;
-        if (token == xconfig.ethAddress()) {
+        if (token == ETH_ADDR) {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
             if (weth.allowance(address(this), spender) < amount) {
