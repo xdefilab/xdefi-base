@@ -105,7 +105,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
         IERC20 TI = IERC20(tokenIn);
         IERC20 TO = IERC20(tokenOut);
 
-        transferFromAllTo(TI, totalAmountIn, address(this));
+        if (transferFromAllTo(TI, totalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
         uint256 actualTotalIn = 0;
         for (uint256 i = 0; i < swaps.length; i++) {
@@ -169,7 +171,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
         IERC20 TI = IERC20(tokenIn);
         IERC20 TO = IERC20(tokenOut);
 
-        transferFromAllTo(TI, maxTotalAmountIn, address(this));
+        if (transferFromAllTo(TI, maxTotalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
         for (uint256 i = 0; i < swaps.length; i++) {
             Swap memory swap = swaps[i];
