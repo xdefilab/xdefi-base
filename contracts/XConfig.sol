@@ -174,6 +174,8 @@ contract XConfig is XConst {
         emit RM_POOL_SIG(msg.sender, pool, sig);
     }
 
+    //batch update pool sig, called by core
+
     function setCore(address _core) external onlyCore {
         require(_core != address(0), "ERR_ZERO_ADDR");
         emit SET_CORE(core, _core);
