@@ -472,7 +472,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(maxAmountsIn.length == tokens.length, "ERR_LENGTH_MISMATCH");
 
         bool hasEth = false;
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint8 i = 0; i < tokens.length; i++) {
             if (msg.value > 0 && tokens[i] == address(weth)) {
                 transferFromAllAndApprove(
                     ETH_ADDR,
@@ -490,8 +490,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         }
         require(msg.value == 0 || hasEth, "ERR_INVALID_PAY");
         pool.joinPool(poolAmountOut, maxAmountsIn);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (hasEth) {
+        for (uint8 i = 0; i < tokens.length; i++) {
+            if (hasEth && tokens[i] == address(weth)) {
                 transferAll(ETH_ADDR, getBalance(ETH_ADDR));
             } else {
                 transferAll(tokens[i], getBalance(tokens[i]));
