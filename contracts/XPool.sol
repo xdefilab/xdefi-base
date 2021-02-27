@@ -360,12 +360,17 @@ contract XPool is XApollo, XPToken, XConst {
 
         uint256 poolTotal = totalSupply();
         uint256 _exitFee = poolAmountIn.bmul(exitFee);
+
+        // never charge exitFee to pool origin
+        if (msg.sender == origin) {
+            _exitFee = 0;
+        }
         uint256 pAiAfterExitFee = poolAmountIn.bsub(_exitFee);
         uint256 ratio = pAiAfterExitFee.bdiv(poolTotal);
         require(ratio != 0, "ERR_MATH_APPROX");
 
-        // to origin
         _pullPoolShare(msg.sender, poolAmountIn);
+        // send exitFee to origin
         if (_exitFee > 0) {
             _pushPoolShare(origin, _exitFee);
         }
