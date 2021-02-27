@@ -6,11 +6,11 @@ const TTokenFactory = artifacts.require("TTokenFactory");
 module.exports = async function (deployer, network, accounts) {
     const config = await XConfig.deployed();
 
-    await deployer.deploy(WETH9);
+    const weth = await WETH9.deployed();
     await deployer.deploy(TTokenFactory);
 
     //deploy XSwapProxyV1
-    await deployer.deploy(XSwapProxyV1, WETH9.address, config.address);
+    await deployer.deploy(XSwapProxyV1, weth.address, config.address);
 
     //setup proxy
     const proxy = await XSwapProxyV1.deployed();
