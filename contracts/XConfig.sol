@@ -26,6 +26,11 @@ contract XConfig is XConst {
     // Swap Proxy Address
     address private swapProxy;
 
+    // ETH and WETH address
+    address public constant ETH_ADDR =
+        address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    address public weth;
+
     // pool sigs for pool deduplication
     // key: keccak256(tokens[i], norms[i]), value: pool_address
     mapping(bytes32 => address) public poolSigs;
@@ -65,7 +70,9 @@ contract XConfig is XConst {
         _;
     }
 
-    constructor() public {
+    constructor(address _weth) public {
+        require(_weth != address(0), "ERR_ZERO_ADDR");
+        weth = _weth;
         core = msg.sender;
         safu = address(this);
         emit INIT_SAFU(address(this));
@@ -115,19 +122,26 @@ contract XConfig is XConst {
         require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
 
         uint256 totalWeight = 0;
+        address[] memory finalTokens = new address[](tokens.length);
         for (uint8 i = 0; i < tokens.length; i++) {
+            if (i > 0) {
+                //token address must bt sorted
+                require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
+            }
+
+            finalTokens[i] = tokens[i];
+            if (tokens[i] == ETH_ADDR) {
+                finalTokens[i] = weth;
+            }
             totalWeight = totalWeight.badd(denorms[i]);
         }
 
         //pool sig generated
         bytes memory poolInfo;
-        for (uint8 i = 0; i < tokens.length; i++) {
-            if (i > 0) {
-                require(tokens[i] > tokens[i - 1], "ERR_TOKENS_NOT_SORTED");
-            }
+        for (uint8 i = 0; i < finalTokens.length; i++) {
             //normalized weight (multiplied by 100)
             uint256 nWeight = denorms[i].bmul(100).bdiv(totalWeight);
-            poolInfo = abi.encodePacked(poolInfo, tokens[i], nWeight);
+            poolInfo = abi.encodePacked(poolInfo, finalTokens[i], nWeight);
         }
         sig = keccak256(poolInfo);
 
