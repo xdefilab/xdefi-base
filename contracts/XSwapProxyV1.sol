@@ -250,11 +250,17 @@ contract XSwapProxyV1 is ReentrancyGuard {
             "ERR_BATCH_COUNT"
         );
 
-        transferFromAllTo(IERC20(tokenIn), totalAmountIn, address(this));
+        IERC20 TI = IERC20(tokenIn);
+        if (transferFromAllTo(TI, totalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
         uint256 actualTotalIn = 0;
         for (uint256 i = 0; i < swapSequences.length; i++) {
-            require(tokenIn == swapSequences[i][0].tokenIn, "ERR_NOT_MATCH");
+            require(
+                address(TI) == swapSequences[i][0].tokenIn,
+                "ERR_NOT_MATCH"
+            );
             actualTotalIn = actualTotalIn.badd(swapSequences[i][0].swapAmount);
 
             uint256 tokenAmountOut = 0;
@@ -268,7 +274,6 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     swap.swapAmount = tokenAmountOut;
                 }
 
-                IXPool pool = IXPool(swap.pool);
                 if (
                     SwapTokenIn.allowance(address(this), swap.pool) <
                     totalAmountIn
@@ -277,7 +282,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     SwapTokenIn.safeApprove(swap.pool, MAX);
                 }
 
-                (tokenAmountOut, ) = pool.swapExactAmountInRefer(
+                (tokenAmountOut, ) = IXPool(swap.pool).swapExactAmountInRefer(
                     swap.tokenIn,
                     swap.swapAmount,
                     swap.tokenOut,
@@ -294,7 +299,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
 
         transferAll(tokenOut, totalAmountOut);
-        transferAll(tokenIn, getBalance(tokenIn));
+        transferAll(tokenIn, getBalance(address(TI)));
     }
 
     function multihopBatchSwapExactOut(
@@ -326,10 +331,16 @@ contract XSwapProxyV1 is ReentrancyGuard {
             "ERR_BATCH_COUNT"
         );
 
-        transferFromAllTo(IERC20(tokenIn), maxTotalAmountIn, address(this));
+        IERC20 TI = IERC20(tokenIn);
+        if (transferFromAllTo(TI, maxTotalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
         for (uint256 i = 0; i < swapSequences.length; i++) {
-            require(tokenIn == swapSequences[i][0].tokenIn, "ERR_NOT_MATCH");
+            require(
+                address(TI) == swapSequences[i][0].tokenIn,
+                "ERR_NOT_MATCH"
+            );
 
             uint256 tokenAmountInFirstSwap = 0;
             // Specific code for a simple swap and a multihop (2 swaps in sequence)
@@ -337,7 +348,6 @@ contract XSwapProxyV1 is ReentrancyGuard {
                 MSwap memory swap = swapSequences[i][0];
                 IERC20 SwapTokenIn = IERC20(swap.tokenIn);
 
-                IXPool pool = IXPool(swap.pool);
                 if (
                     SwapTokenIn.allowance(address(this), swap.pool) <
                     maxTotalAmountIn
@@ -346,7 +356,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     SwapTokenIn.safeApprove(swap.pool, MAX);
                 }
 
-                (tokenAmountInFirstSwap, ) = pool.swapExactAmountOutRefer(
+                (tokenAmountInFirstSwap, ) = IXPool(swap.pool)
+                    .swapExactAmountOutRefer(
                     swap.tokenIn,
                     swap.limitReturnAmount,
                     swap.tokenOut,
@@ -417,7 +428,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(totalAmountIn <= maxTotalAmountIn, "ERR_LIMIT_IN");
 
         transferAll(tokenOut, getBalance(tokenOut));
-        transferAll(tokenIn, getBalance(tokenIn));
+        transferAll(tokenIn, getBalance(address(TI)));
     }
 
     // Pool Management
