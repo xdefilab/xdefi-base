@@ -45,6 +45,12 @@ contract XSwapProxyV1 is ReentrancyGuard {
     uint256 public constant MIN_BATCH_SWAPS = 1;
     uint256 public constant MAX_BATCH_SWAPS = 4;
 
+    /**
+     * the address used within the protocol to identify ETH
+     */
+    address public constant ETH_ADDR =
+        address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+
     // WETH9
     IWETH weth;
 
@@ -97,9 +103,15 @@ contract XSwapProxyV1 is ReentrancyGuard {
         );
 
         IERC20 TI = IERC20(tokenIn);
-        IERC20 TO = IERC20(tokenOut);
+        if (transferFromAllTo(TI, totalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
-        transferFromAllTo(TI, totalAmountIn, address(this));
+        IERC20 TO = IERC20(tokenOut);
+        if (tokenOut == ETH_ADDR) {
+            TO = IERC20(address(weth));
+        }
+        require(TI != TO, "ERR_SAME_TOKEN");
 
         uint256 actualTotalIn = 0;
         for (uint256 i = 0; i < swaps.length; i++) {
@@ -113,9 +125,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
             (uint256 tokenAmountOut, ) =
                 pool.swapExactAmountInRefer(
-                    tokenIn,
+                    address(TI),
                     swap.tokenInParam,
-                    tokenOut,
+                    address(TO),
                     swap.tokenOutParam,
                     swap.maxPrice,
                     referrer
@@ -127,9 +139,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(actualTotalIn <= totalAmountIn, "ERR_ACTUAL_IN");
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
 
-        transferAll(TO, totalAmountOut);
-        transferAll(TI, getBalance(tokenIn));
-        return totalAmountOut;
+        transferAll(tokenOut, totalAmountOut);
+        transferAll(tokenIn, getBalance(address(TI)));
     }
 
     function batchSwapExactOut(
@@ -161,9 +172,15 @@ contract XSwapProxyV1 is ReentrancyGuard {
         );
 
         IERC20 TI = IERC20(tokenIn);
-        IERC20 TO = IERC20(tokenOut);
+        if (transferFromAllTo(TI, maxTotalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
-        transferFromAllTo(TI, maxTotalAmountIn, address(this));
+        IERC20 TO = IERC20(tokenOut);
+        if (tokenOut == ETH_ADDR) {
+            TO = IERC20(address(weth));
+        }
+        require(TI != TO, "ERR_SAME_TOKEN");
 
         for (uint256 i = 0; i < swaps.length; i++) {
             Swap memory swap = swaps[i];
@@ -176,9 +193,9 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
             (uint256 tokenAmountIn, ) =
                 pool.swapExactAmountOutRefer(
-                    tokenIn,
+                    address(TI),
                     swap.tokenInParam,
-                    tokenOut,
+                    address(TO),
                     swap.tokenOutParam,
                     swap.maxPrice,
                     referrer
@@ -187,8 +204,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         }
         require(totalAmountIn <= maxTotalAmountIn, "ERR_LIMIT_IN");
 
-        transferAll(TO, getBalance(tokenOut));
-        transferAll(TI, getBalance(tokenIn));
+        transferAll(tokenOut, getBalance(tokenOut));
+        transferAll(tokenIn, getBalance(address(TI)));
     }
 
     // Multihop Swap
@@ -233,11 +250,17 @@ contract XSwapProxyV1 is ReentrancyGuard {
             "ERR_BATCH_COUNT"
         );
 
-        transferFromAllTo(IERC20(tokenIn), totalAmountIn, address(this));
+        IERC20 TI = IERC20(tokenIn);
+        if (transferFromAllTo(TI, totalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
         uint256 actualTotalIn = 0;
         for (uint256 i = 0; i < swapSequences.length; i++) {
-            require(tokenIn == swapSequences[i][0].tokenIn, "ERR_NOT_MATCH");
+            require(
+                address(TI) == swapSequences[i][0].tokenIn,
+                "ERR_NOT_MATCH"
+            );
             actualTotalIn = actualTotalIn.badd(swapSequences[i][0].swapAmount);
 
             uint256 tokenAmountOut = 0;
@@ -251,7 +274,6 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     swap.swapAmount = tokenAmountOut;
                 }
 
-                IXPool pool = IXPool(swap.pool);
                 if (
                     SwapTokenIn.allowance(address(this), swap.pool) <
                     totalAmountIn
@@ -260,7 +282,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     SwapTokenIn.safeApprove(swap.pool, MAX);
                 }
 
-                (tokenAmountOut, ) = pool.swapExactAmountInRefer(
+                (tokenAmountOut, ) = IXPool(swap.pool).swapExactAmountInRefer(
                     swap.tokenIn,
                     swap.swapAmount,
                     swap.tokenOut,
@@ -276,8 +298,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(actualTotalIn <= totalAmountIn, "ERR_ACTUAL_IN");
         require(totalAmountOut >= minTotalAmountOut, "ERR_LIMIT_OUT");
 
-        transferAll(IERC20(tokenOut), totalAmountOut);
-        transferAll(IERC20(tokenIn), getBalance(tokenIn));
+        transferAll(tokenOut, totalAmountOut);
+        transferAll(tokenIn, getBalance(address(TI)));
     }
 
     function multihopBatchSwapExactOut(
@@ -309,10 +331,16 @@ contract XSwapProxyV1 is ReentrancyGuard {
             "ERR_BATCH_COUNT"
         );
 
-        transferFromAllTo(IERC20(tokenIn), maxTotalAmountIn, address(this));
+        IERC20 TI = IERC20(tokenIn);
+        if (transferFromAllTo(TI, maxTotalAmountIn, address(this))) {
+            TI = IERC20(address(weth));
+        }
 
         for (uint256 i = 0; i < swapSequences.length; i++) {
-            require(tokenIn == swapSequences[i][0].tokenIn, "ERR_NOT_MATCH");
+            require(
+                address(TI) == swapSequences[i][0].tokenIn,
+                "ERR_NOT_MATCH"
+            );
 
             uint256 tokenAmountInFirstSwap = 0;
             // Specific code for a simple swap and a multihop (2 swaps in sequence)
@@ -320,7 +348,6 @@ contract XSwapProxyV1 is ReentrancyGuard {
                 MSwap memory swap = swapSequences[i][0];
                 IERC20 SwapTokenIn = IERC20(swap.tokenIn);
 
-                IXPool pool = IXPool(swap.pool);
                 if (
                     SwapTokenIn.allowance(address(this), swap.pool) <
                     maxTotalAmountIn
@@ -329,7 +356,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
                     SwapTokenIn.safeApprove(swap.pool, MAX);
                 }
 
-                (tokenAmountInFirstSwap, ) = pool.swapExactAmountOutRefer(
+                (tokenAmountInFirstSwap, ) = IXPool(swap.pool)
+                    .swapExactAmountOutRefer(
                     swap.tokenIn,
                     swap.limitReturnAmount,
                     swap.tokenOut,
@@ -399,8 +427,8 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
         require(totalAmountIn <= maxTotalAmountIn, "ERR_LIMIT_IN");
 
-        transferAll(IERC20(tokenOut), getBalance(tokenOut));
-        transferAll(IERC20(tokenIn), getBalance(tokenIn));
+        transferAll(tokenOut, getBalance(tokenOut));
+        transferAll(tokenIn, getBalance(address(TI)));
     }
 
     // Pool Management
@@ -455,10 +483,10 @@ contract XSwapProxyV1 is ReentrancyGuard {
         require(maxAmountsIn.length == tokens.length, "ERR_LENGTH_MISMATCH");
 
         bool hasEth = false;
-        for (uint256 i = 0; i < tokens.length; i++) {
+        for (uint8 i = 0; i < tokens.length; i++) {
             if (msg.value > 0 && tokens[i] == address(weth)) {
                 transferFromAllAndApprove(
-                    xconfig.ethAddress(),
+                    ETH_ADDR,
                     maxAmountsIn[i],
                     poolAddress
                 );
@@ -473,14 +501,11 @@ contract XSwapProxyV1 is ReentrancyGuard {
         }
         require(msg.value == 0 || hasEth, "ERR_INVALID_PAY");
         pool.joinPool(poolAmountOut, maxAmountsIn);
-        for (uint256 i = 0; i < tokens.length; i++) {
-            if (hasEth) {
-                transferAll(
-                    IERC20(xconfig.ethAddress()),
-                    getBalance(xconfig.ethAddress())
-                );
+        for (uint8 i = 0; i < tokens.length; i++) {
+            if (hasEth && tokens[i] == address(weth)) {
+                transferAll(ETH_ADDR, getBalance(ETH_ADDR));
             } else {
-                transferAll(IERC20(tokens[i]), getBalance(tokens[i]));
+                transferAll(tokens[i], getBalance(tokens[i]));
             }
         }
         pool.transfer(msg.sender, pool.balanceOf(address(this)));
@@ -521,22 +546,25 @@ contract XSwapProxyV1 is ReentrancyGuard {
 
     // Internal
     function getBalance(address token) internal view returns (uint256) {
-        if (token == xconfig.ethAddress()) {
+        if (token == ETH_ADDR) {
             return weth.balanceOf(address(this));
         }
         return IERC20(token).balanceOf(address(this));
     }
 
-    function transferAll(IERC20 token, uint256 amount) internal returns (bool) {
+    function transferAll(address token, uint256 amount)
+        internal
+        returns (bool)
+    {
         if (amount == 0) {
             return true;
         }
-        if (address(token) == xconfig.ethAddress()) {
+        if (token == ETH_ADDR) {
             weth.withdraw(amount);
             (bool xfer, ) = msg.sender.call.value(amount).gas(9100)("");
             require(xfer, "ERR_ETH_FAILED");
         } else {
-            token.safeTransfer(msg.sender, amount);
+            IERC20(token).safeTransfer(msg.sender, amount);
         }
         return true;
     }
@@ -547,10 +575,12 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address to
     ) internal returns (bool hasETH) {
         hasETH = false;
-        if (address(token) == xconfig.ethAddress()) {
+        if (address(token) == ETH_ADDR) {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
-            weth.transfer(to, amount);
+            if (to != address(this)) {
+                weth.transfer(to, amount);
+            }
             hasETH = true;
         } else {
             token.safeTransferFrom(msg.sender, to, amount);
@@ -563,7 +593,7 @@ contract XSwapProxyV1 is ReentrancyGuard {
         address spender
     ) internal returns (bool hasETH) {
         hasETH = false;
-        if (token == xconfig.ethAddress()) {
+        if (token == ETH_ADDR) {
             require(amount == msg.value, "ERR_TOKEN_AMOUNT");
             weth.deposit.value(amount)();
             if (weth.allowance(address(this), spender) < amount) {

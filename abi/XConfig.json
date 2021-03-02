@@ -138,6 +138,19 @@
             "anonymous": false,
             "inputs": [
                 {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "SET_MFXPT",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
                     "indexed": true,
                     "internalType": "address",
                     "name": "proxy",
@@ -344,21 +357,6 @@
         {
             "constant": true,
             "inputs": [],
-            "name": "MIN_EFFECTIVE_XPT",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
             "name": "MIN_POOL_AMOUNT",
             "outputs": [
                 {
@@ -405,6 +403,21 @@
             "constant": true,
             "inputs": [],
             "name": "maxExitFee",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "minEffeciveXPT",
             "outputs": [
                 {
                     "internalType": "uint256",
@@ -528,21 +541,6 @@
             "type": "function"
         },
         {
-            "constant": true,
-            "inputs": [],
-            "name": "ethAddress",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "pure",
-            "type": "function"
-        },
-        {
             "constant": false,
             "inputs": [
                 {
@@ -648,6 +646,21 @@
                 }
             ],
             "name": "setSafuFee",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "_mfxpt",
+                    "type": "uint256"
+                }
+            ],
+            "name": "setMinEffeciveXPT",
             "outputs": [],
             "payable": false,
             "stateMutability": "nonpayable",

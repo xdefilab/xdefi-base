@@ -99,14 +99,6 @@ contract XConfig is XConst {
     }
 
     /**
-     * @dev returns the address used within the protocol to identify ETH
-     * @return the address assigned to ETH
-     */
-    function ethAddress() external pure returns (address) {
-        return address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-    }
-
-    /**
      * pool deduplication
      * @dev check pool existence which has the same tokens(sorted by address) and weights
      * the denorms will allways between [10**18, 50 * 10**18]
@@ -181,6 +173,8 @@ contract XConfig is XConst {
 
         emit RM_POOL_SIG(msg.sender, pool, sig);
     }
+
+    //batch update pool sig, called by core
 
     function setCore(address _core) external onlyCore {
         require(_core != address(0), "ERR_ZERO_ADDR");

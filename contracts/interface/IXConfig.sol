@@ -11,8 +11,6 @@ interface IXConfig {
 
     function getSwapProxy() external view returns (address);
 
-    function ethAddress() external pure returns (address);
-
     function dedupPool(address[] calldata tokens, uint256[] calldata denorms)
         external
         returns (bool exist, bytes32 sig);
