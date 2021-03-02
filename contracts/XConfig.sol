@@ -158,23 +158,58 @@ contract XConfig is XConst {
         require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(pool != address(0), "ERR_ZERO_ADDR");
         require(sig != 0, "ERR_NOT_SIG");
-        poolSigs[sig] = pool;
-        poolSigCount = poolSigCount.badd(1);
 
+        if (poolSigs[sig] == address(0)) {
+            //add new sig
+            poolSigCount = poolSigCount.badd(1);
+        }
+
+        poolSigs[sig] = pool;
         emit ADD_POOL_SIG(msg.sender, pool, sig);
     }
 
     // remove pool's sig
     function removePoolSig(bytes32 sig) internal {
         require(sig != 0, "ERR_NOT_SIG");
-        address pool = poolSigs[sig];
-        poolSigs[sig] = address(0);
-        poolSigCount = poolSigCount.bsub(1);
 
-        emit RM_POOL_SIG(msg.sender, pool, sig);
+        if (poolSigs[sig] != address(0)) {
+            emit RM_POOL_SIG(msg.sender, poolSigs[sig], sig);
+            delete poolSigs[sig];
+            poolSigCount = poolSigCount.bsub(1);
+        }
     }
 
-    //batch update pool sig, called by core
+    // manually batch update poolSig, called by core
+    function updatePoolSigs(bytes32[] calldata sigs, address[] calldata pools)
+        external
+        onlyCore
+    {
+        require(sigs.length == pools.length, "ERR_LENGTH_MISMATCH");
+        require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
+
+        for (uint8 i = 0; i < sigs.length; i++) {
+            bytes32 sig = sigs[i];
+            address pool = pools[i];
+            require(sig != 0, "ERR_NOT_SIG");
+
+            //remove
+            if (pool == address(0)) {
+                removePoolSig(sig);
+                continue;
+            }
+
+            //update
+            if (poolSigs[sig] != address(0)) {
+                //over write
+                poolSigs[sig] = pool;
+            } else {
+                //add new
+                poolSigs[sig] = pool;
+                poolSigCount = poolSigCount.badd(1);
+                emit ADD_POOL_SIG(msg.sender, pool, sig);
+            }
+        }
+    }
 
     function setCore(address _core) external onlyCore {
         require(_core != address(0), "ERR_ZERO_ADDR");
@@ -214,7 +249,7 @@ contract XConfig is XConst {
     function updateSafu(address[] calldata pools) external onlyCore {
         require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
 
-        for (uint256 i = 0; i < pools.length; i++) {
+        for (uint8 i = 0; i < pools.length; i++) {
             require(Address.isContract(pools[i]), "ERR_NOT_CONTRACT");
 
             IXPool pool = IXPool(pools[i]);
@@ -229,7 +264,7 @@ contract XConfig is XConst {
     {
         require(pools.length > 0 && pools.length <= 30, "ERR_BATCH_COUNT");
 
-        for (uint256 i = 0; i < pools.length; i++) {
+        for (uint8 i = 0; i < pools.length; i++) {
             require(Address.isContract(pools[i]), "ERR_NOT_CONTRACT");
 
             IXPool pool = IXPool(pools[i]);
