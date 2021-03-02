@@ -666,7 +666,7 @@ contract XPool is XApollo, XPToken, XConst {
         _pullPoolShare(msg.sender, poolAmountIn);
 
         // exit fee to origin
-        if (exitFee > 0) {
+        if (exitFee > 0 && msg.sender != origin) {
             uint256 _exitFee = poolAmountIn.bmul(exitFee);
             _pushPoolShare(origin, _exitFee);
             poolAmountIn = poolAmountIn.bsub(_exitFee);
