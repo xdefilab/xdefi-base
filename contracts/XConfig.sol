@@ -109,6 +109,7 @@ contract XConfig is XConst {
         external
         returns (bool exist, bytes32 sig)
     {
+        require(msg.sender == swapProxy, "ERR_NOT_SWAPPROXY");
         require(tokens.length == denorms.length, "ERR_LENGTH_MISMATCH");
         require(tokens.length >= MIN_BOUND_TOKENS, "ERR_MIN_TOKENS");
         require(tokens.length <= MAX_BOUND_TOKENS, "ERR_MAX_TOKENS");
