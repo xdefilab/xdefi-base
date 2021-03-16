@@ -2,7 +2,13 @@
     "contractName": "XConfig",
     "abi": [
         {
-            "inputs": [],
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_weth",
+                    "type": "address"
+                }
+            ],
             "payable": false,
             "stateMutability": "nonpayable",
             "type": "constructor"
@@ -213,6 +219,21 @@
                     "internalType": "uint256",
                     "name": "",
                     "type": "uint256"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "ETH_ADDR",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
                 }
             ],
             "payable": false,
@@ -468,6 +489,21 @@
         {
             "constant": true,
             "inputs": [],
+            "name": "weth",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "payable": false,
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
             "name": "getCore",
             "outputs": [
                 {
@@ -586,6 +622,26 @@
                 }
             ],
             "name": "addPoolSig",
+            "outputs": [],
+            "payable": false,
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {
+                    "internalType": "bytes32[]",
+                    "name": "sigs",
+                    "type": "bytes32[]"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "pools",
+                    "type": "address[]"
+                }
+            ],
+            "name": "updatePoolSigs",
             "outputs": [],
             "payable": false,
             "stateMutability": "nonpayable",
