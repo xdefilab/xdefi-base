@@ -47,6 +47,12 @@ contract XPool is XApollo, XPToken, XConst {
         uint256 tokenAmountIn
     );
 
+    event LOG_SINGLE_JOIN(
+        address indexed caller,
+        address indexed tokenIn,
+        uint256 tokenAmountIn
+    );
+
     event LOG_EXIT(
         address indexed caller,
         address indexed tokenOut,
@@ -648,7 +654,7 @@ contract XPool is XApollo, XPToken, XConst {
         inRecord.balance = (inRecord.balance).badd(tokenAmountIn);
 
         _pushUnderlying(tokenIn, SAFU, _safuFee);
-        emit LOG_JOIN(msg.sender, tokenIn, tokenAmountIn);
+        emit LOG_SINGLE_JOIN(msg.sender, tokenIn, tokenAmountIn);
         _mintPoolShare(poolAmountOut);
         _pushPoolShare(msg.sender, poolAmountOut);
         return poolAmountOut;
