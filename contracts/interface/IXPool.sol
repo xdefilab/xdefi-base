@@ -130,6 +130,9 @@ interface IXPool {
         uint256 minAmountOut
     ) external returns (uint256 tokenAmountOut);
 
+    function setPoolType(uint8 XPoolType) external;
+    
+    function setExpery(uint256 expiryBlockHeight) external;
     // Pool Governance
     function updateSafu(address safu, uint256 fee) external;
 
