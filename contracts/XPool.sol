@@ -70,6 +70,13 @@ contract XPool is XApollo, XPToken, XConst {
 
     event UPDATE_FARM(address indexed caller, bool isFarm);
 
+    event LOG_GULP(
+        address indexed caller,
+        address indexed token,
+        uint256 amountBefore,
+        uint256 amountAfter
+    );
+
     // anonymous event
     event LOG_CALL(
         bytes4 indexed sig,
@@ -280,7 +287,11 @@ contract XPool is XApollo, XPToken, XConst {
     // Absorb any tokens that have been sent to this contract into the pool
     function gulp(address token) external _logs_ _lock_ {
         require(_records[token].bound, "ERR_NOT_BOUND");
-        _records[token].balance = IERC20(token).balanceOf(address(this));
+
+        uint256 amountBefore = _records[token].balance;
+        uint256 amountAfter = IERC20(token).balanceOf(address(this));
+        _records[token].balance = amountAfter;
+        emit LOG_GULP(msg.sender, token, amountBefore, amountAfter);
     }
 
     function getSpotPrice(address tokenIn, address tokenOut)

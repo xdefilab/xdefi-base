@@ -162,6 +162,37 @@
                 {
                     "indexed": true,
                     "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "amountBefore",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "amountAfter",
+                    "type": "uint256"
+                }
+            ],
+            "name": "LOG_GULP",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "caller",
+                    "type": "address"
+                },
+                {
+                    "indexed": true,
+                    "internalType": "address",
                     "name": "tokenIn",
                     "type": "address"
                 },
