@@ -91,16 +91,20 @@ contract XPToken is XTokenBase, IERC20, XApollo {
         address dst,
         uint256 amt
     ) external returns (bool) {
-        require(
-            msg.sender == src || amt <= _allowance[src][msg.sender],
-            "ERR_BTOKEN_BAD_CALLER"
-        );
-        _move(src, dst, amt);
-        if (msg.sender != src && _allowance[src][msg.sender] != uint256(-1)) {
-            _allowance[src][msg.sender] = (_allowance[src][msg.sender]).bsub(
-                amt
+        if (msg.sender == src) {
+            _move(src, dst, amt);
+        } else {
+            require(
+                amt <= _allowance[src][msg.sender],
+                "ERR_BTOKEN_BAD_CALLER"
             );
-            emit Approval(msg.sender, dst, _allowance[src][msg.sender]);
+            _move(src, dst, amt);
+            if (_allowance[src][msg.sender] != uint256(-1)) {
+                _allowance[src][msg.sender] = (_allowance[src][msg.sender]).bsub(
+                    amt
+                );
+                emit Approval(msg.sender, dst, _allowance[src][msg.sender]);
+            }
         }
         return true;
     }
